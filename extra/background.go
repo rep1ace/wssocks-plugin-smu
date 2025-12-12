@@ -19,6 +19,7 @@ type Options struct {
 	client.Options
 	vpn.UstbVpn
 	RemoteAddr string
+	AuthToken  string
 }
 
 type TaskHandles struct {
@@ -69,6 +70,9 @@ func (h *TaskHandles) StartWssocks(options Options) error {
 	}
 
 	options.RemoteHeaders = make(http.Header)
+	if options.AuthToken != "" {
+		options.RemoteHeaders.Set("Key", options.AuthToken)
+	}
 
 	h.Handles = *client.NewClientHandles()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // fixme

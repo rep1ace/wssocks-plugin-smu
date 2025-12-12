@@ -1,12 +1,14 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 	"runtime"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
@@ -27,6 +29,9 @@ const (
 	GithubRepoUrl     = "https://github.com/genshen/wssocks-plugin-ustb"
 	DocumentUrl       = "https://genshen.github.io/wssocks-plugin-ustb/"
 )
+
+//go:embed app-512.png
+var appIconData []byte
 
 const (
 	btnStopped = iota
@@ -61,6 +66,7 @@ func newCheckbox(text string, checked bool, onChanged func(bool)) *widget.Check 
 func main() {
 	wssApp := app.NewWithID(AppId)
 	wssApp.Settings().SetTheme(&myTheme{})
+	wssApp.SetIcon(fyne.NewStaticResource("icon", appIconData))
 
 	w := wssApp.NewWindow(AppName)
 	//w.SetFixedSize(true)
@@ -111,27 +117,40 @@ func main() {
 				},
 				UstbVpn:    onLoadValue(),
 				RemoteAddr: uiRemoteAddr.Text,
+				AuthToken:  uiAuthToken.Text,
 			}
 			btnStatus = btnStarting
 			btnStart.SetText("Loading")
-			if err := handles.StartWssocks(options); err != nil {
-				// log error
-				dialog.ShowError(err, w)
-				btnStart.SetText("Start")
-				btnStatus = btnStopped
-				return
-			}
-			btnStart.SetText("Stop")
-			btnStatus = btnRunning
+
+			// Run connection in a goroutine to avoid blocking UI (especially for captcha)
 			go func() {
+				if err := handles.StartWssocks(options); err != nil {
+					// log error
+					fyne.Do(func() {
+						dialog.ShowError(err, w)
+						btnStart.SetText("Start")
+						btnStatus = btnStopped
+					})
+					return
+				}
+				fyne.Do(func() {
+					btnStart.SetText("Stop")
+					btnStatus = btnRunning
+				})
+
+				// Wait for connection to close
 				// the `ignoreWaitErr` the same as swiftui.
 				ignoreWaitErr = false
 				// wait error and stop the client
 				if err := handles.Wait(); err != nil && !ignoreWaitErr {
-					dialog.ShowError(err, w)
+					fyne.Do(func() {
+						dialog.ShowError(err, w)
+					})
 				}
-				btnStart.SetText("Start")
-				btnStatus = btnStopped
+				fyne.Do(func() {
+					btnStart.SetText("Start")
+					btnStatus = btnStopped
+				})
 				ignoreWaitErr = true
 			}()
 		}
@@ -180,8 +199,12 @@ func main() {
 	)
 
 	w.SetContent(container.NewVBox(
-		widget.NewCard("", "wssocks settings", basicUi),      // wssocks basic ui
-		widget.NewCard("", "USTB VPN authentication", vpnUi), // vpn ui
+		container.NewAppTabs(
+			container.NewTabItem("Basic", widget.NewCard("", "wssocks settings", basicUi)),
+			container.NewTabItem("SMU VPN", container.NewVBox(
+				widget.NewCard("", "SMU VPN settings", vpnUi)),
+			),
+		),
 		btnStart,
 		selectCopyProxyCommand,
 		&widget.Separator{},
@@ -231,40 +254,62 @@ func main() {
 // it returns callback function: onAppClose for saving preference,
 // loadUiValue for loading value from the input box.
 func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
-	uiVpnEnable := newCheckbox("enable ustb vpn", true, nil)
-	vpnSettings := VpnSettingsUI{}
-	vpnSettingBtn := widget.NewButtonWithIcon("VPN Settings", theme.SettingsIcon(), func() {
-		vpnSettings.OpenVpnSettings(wssApp, (*wssApp).Preferences())
-	})
-
-	loadVPNMainPreference((*wssApp).Preferences(), uiVpnEnable)
-
-	uiVpnEnable.OnChanged = func(checked bool) {
-		if checked {
-			vpnSettingBtn.Enable()
-		} else {
-			vpnSettingBtn.Disable()
-		}
-	}
-
 	// the vpn UI and vpn settings UI
-	vpnUi := container.NewVBox(
-		&widget.Form{Items: []*widget.FormItem{
-			{Text: "vpn enable", Widget: uiVpnEnable},
-		}},
-		vpnSettingBtn,
-	)
+	vpnSettings := VpnSettingsUI{}
+	vpnSettings.Init((*wssApp).Preferences())
+	vpnUi := vpnSettings.GetContainer()
 
 	loadUiValues := func() vpn.UstbVpn {
 		vals := vpn.UstbVpn{
-			Enable:     uiVpnEnable.Checked,
 			QrCodeAuth: newQrCodeAuth(wssApp),
+			CaptchaHandler: func(imgData []byte) (string, error) {
+				// Create a channel to receive the result
+				resultChan := make(chan string)
+				errChan := make(chan error)
+
+				// Run UI operations on the main thread
+				// The threading issue specifically: callbacks from core are not on UI thread.
+				// We must use fyne.Do to ensure UI operations are safe.
+
+				fyne.Do(func() {
+					// Create image from data
+					res := fyne.NewStaticResource("captcha.jpg", imgData)
+					img := canvas.NewImageFromResource(res)
+					img.FillMode = canvas.ImageFillContain
+					img.SetMinSize(fyne.NewSize(400, 160)) // Set a reasonable min size
+
+					entry := widget.NewEntry()
+					entry.PlaceHolder = "Enter Captcha"
+
+					content := container.NewVBox(
+						img,
+						entry,
+					)
+
+					d := dialog.NewCustomConfirm("Enter Captcha", "OK", "Cancel", content, func(ok bool) {
+						if ok {
+							resultChan <- entry.Text
+						} else {
+							errChan <- fmt.Errorf("captcha input cancelled")
+						}
+					}, (*wssApp).Driver().AllWindows()[0]) // Assuming the main window is the first one or active one.
+
+					d.Show()
+				})
+
+				select {
+				case res := <-resultChan:
+					return res, nil
+				case err := <-errChan:
+					return "", err
+				}
+			},
 		}
 		vpnSettings.LoadSettingsValues(&vals)
 		return vals
 	}
 	onVpnClose := func() {
-		saveVPNMainPreference((*wssApp).Preferences(), uiVpnEnable)
+		vpnSettings.Save((*wssApp).Preferences())
 	}
 	return vpnUi, loadUiValues, onVpnClose
 }

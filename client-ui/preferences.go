@@ -1,10 +1,11 @@
 package main
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
-	"strings"
 )
 
 const (
@@ -40,7 +41,7 @@ func saveVPNMainPreference(pref fyne.Preferences,
 	pref.SetBool(PrefVpnEnable, uiVpnEnable.Checked)
 }
 
-func saveVPNPreference(pref fyne.Preferences, uiVpnAuthMethod *widget.RadioGroup, uiVpnForceLogout, uiVpnHostEncrypt *widget.Check,
+func saveVPNPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt *widget.Check,
 	uiVpnHostInput, uiVpnUsername, uiVpnPassword *widget.Entry) {
 	if !pref.Bool(PrefHasPreference) {
 		return
@@ -51,11 +52,7 @@ func saveVPNPreference(pref fyne.Preferences, uiVpnAuthMethod *widget.RadioGroup
 	pref.SetString(PrefVpnHostInput, uiVpnHostInput.Text)
 	pref.SetString(PrefVpnUsername, uiVpnUsername.Text)
 	//pref.SetString(PrefVpnPassword,uiVpnPassword.Text)
-	if uiVpnAuthMethod.Selected == TextVpnAuthMethodPasswd {
-		pref.SetInt(PrefVpnAuthMethod, vpn.VpnAuthMethodPasswd)
-	} else if uiVpnAuthMethod.Selected == TextVpnAuthMethodQrCode {
-		pref.SetInt(PrefVpnAuthMethod, vpn.VpnAuthMethodQRCode)
-	}
+	pref.SetInt(PrefVpnAuthMethod, vpn.VpnAuthMethodPasswd)
 }
 
 func loadBasicPreference(pref fyne.Preferences, uiLocalAddr, uiRemoteAddr,
@@ -103,7 +100,7 @@ func loadVPNMainPreference(pref fyne.Preferences, uiVpnEnable *widget.Check) {
 
 }
 
-func loadVpnPreference(pref fyne.Preferences, uiVpnAuthMethod *widget.RadioGroup, uiVpnForceLogout, uiVpnHostEncrypt *widget.Check,
+func loadVpnPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt *widget.Check,
 	uiVpnHostInput, uiVpnUsername, uiVpnPassword *widget.Entry) {
 	if !pref.Bool(PrefHasPreference) {
 		return
@@ -115,16 +112,6 @@ func loadVpnPreference(pref fyne.Preferences, uiVpnAuthMethod *widget.RadioGroup
 	// vpn force logout
 	if enable := pref.Bool(PrefVpnHostEncrypt); !enable {
 		uiVpnHostEncrypt.SetChecked(enable)
-	}
-
-	// vpn auth method
-	authMethod := pref.Int(PrefVpnAuthMethod)
-	if authMethod == vpn.VpnAuthMethodPasswd {
-		uiVpnAuthMethod.SetSelected(TextVpnAuthMethodPasswd)
-	} else if authMethod == vpn.VpnAuthMethodQRCode {
-		uiVpnAuthMethod.SetSelected(TextVpnAuthMethodQrCode)
-	} else {
-		// todo error
 	}
 
 	// vpn host, username, password

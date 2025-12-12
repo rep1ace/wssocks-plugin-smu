@@ -31,10 +31,11 @@ type UstbVpn struct {
 	AuthMethod  int // value of VpnAuthMethodPasswd or VpnAuthMethodQRCode
 	PasswdAuth  passwd.UstbVpnPasswdAuth
 	QrCodeAuth  qrcode.QrCodeAuth
-	TargetVpn   string
-	HostEncrypt bool
-	ForceLogout bool
-	ConnOptions plugin.Options // normal connection options
+	TargetVpn      string
+	HostEncrypt    bool
+	ForceLogout    bool
+	ConnOptions    plugin.Options // normal connection options
+	CaptchaHandler passwd.CaptchaHandler
 }
 
 // create a UstbVpn instance, and add necessary command options to client sub-command.
@@ -45,7 +46,7 @@ func NewUstbVpnCli() *UstbVpn {
 		clientCmd.FlagSet.BoolVar(&vpn.Enable, "vpn-enable", false, `enable USTB vpn feature.`)
 		clientCmd.FlagSet.StringVar(&vpn.PasswdAuth.Username, "vpn-username", "", `username to login vpn.`)
 		clientCmd.FlagSet.StringVar(&vpn.PasswdAuth.Password, "vpn-password", "", `password to login vpn.`)
-		clientCmd.FlagSet.StringVar(&vpn.TargetVpn, "vpn-host", passwd.USTBVpnHost, `hostname of vpn server.`)
+		clientCmd.FlagSet.StringVar(&vpn.TargetVpn, "vpn-host", passwd.SMUVpnHost, `hostname of vpn server.`)
 		clientCmd.FlagSet.BoolVar(&vpn.ForceLogout, "vpn-force-logout", false,
 			`force logout account on other devices.`)
 		clientCmd.FlagSet.BoolVar(&vpn.HostEncrypt, "vpn-host-encrypt", true,
@@ -94,7 +95,7 @@ func (v *UstbVpn) PasswordAuthForCookie(hc *http.Client, transport *http.Transpo
 	}
 
 	// add cookie
-	al := passwd.AutoLogin{Host: v.TargetVpn, ForceLogout: v.ForceLogout, SkipTLSVerify: v.ConnOptions.SkipTLSVerify}
+	al := passwd.AutoLogin{Host: v.TargetVpn, ForceLogout: v.ForceLogout, SkipTLSVerify: v.ConnOptions.SkipTLSVerify, CaptchaHandler: v.CaptchaHandler}
 	if cookies, err := al.VpnLogin(v.PasswdAuth.Username, v.PasswdAuth.Password); err != nil {
 		return fmt.Errorf("error vpn login: %w", err)
 	} else {
@@ -176,7 +177,7 @@ func vpnUrl(hostEncrypt bool, vpnHost string, ssl bool, u *url.URL) {
 	}
 
 	if hostEncrypt {
-		const key = "wrdvpnisthebest!"
+		const key = "SmuisformalFimmu"
 		var aes_e = newAesEncrypt(key)
 		encryptHost, _ := aes_e.Encrypt(u.Host)
 		u.Path = "/" + schemeWithPort + "/" + hex.EncodeToString([]byte(key)) + hex.EncodeToString(encryptHost) + u.Path

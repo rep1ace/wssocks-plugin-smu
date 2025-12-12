@@ -2,65 +2,71 @@ package passwd
 
 import (
 	"bufio"
+	"crypto/md5"
 	"crypto/tls"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"regexp"
+	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 )
 
-const USTBVpnHost = "n.ustb.edu.cn"
+const SMUVpnHost = "webvpn.smu.edu.cn"
+const CaptchaUrl = "https://webvpn.smu.edu.cn/https/536d756973666f726d616c46696d6d75bec2cf24168ae597f8d50e40b9f6/imageServlet.do"
+const LoginUrl = "https://webvpn.smu.edu.cn/https/536d756973666f726d616c46696d6d75bec2cf24168ae597f8d50e40b9f6/login/login.do"
+const RedirectUrl = "https://webvpn.smu.edu.cn/https/536d756973666f726d616c46696d6d75bccede7c1589becaf0c4550bbeed97492a/login"
+
+// Constants used by vpn.go
+const USTBVpnHost = SMUVpnHost // Alias for compatibility
 const USTBVpnHttpScheme = "http"
 const USTBVpnHttpsScheme = "https"
 const USTBVpnWSScheme = "ws"
 const USTBVpnWSSScheme = "wss"
 
+// Keep existing interface for compatibility, though methods might change behavior or be unused
 type AutoLoginInterface interface {
 	TestAddr() string
 	LoginAddr() string
 	LogoutAddr() string
 }
 
+type CaptchaHandler func(imgData []byte) (string, error)
+
 type AutoLogin struct {
-	Host          string
-	ForceLogout   bool
-	SSLEnabled    bool // the vpn server supports https
-	SkipTLSVerify bool // skip tsl verify when setting https connectioon
+	Host           string
+	ForceLogout    bool
+	SSLEnabled     bool // the vpn server supports https
+	SkipTLSVerify  bool // skip tsl verify when setting https connectioon
+	CaptchaHandler CaptchaHandler
 }
 
-func (al *AutoLogin) TestAddr(ssl bool) string {
-	if ssl {
-		return USTBVpnHttpsScheme + "://" + al.Host + "/"
+// Helper to open file
+func openFile(url string) error {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
 	}
-	return USTBVpnHttpScheme + "://" + al.Host + "/"
-}
-
-func (al *AutoLogin) LoginAddr(ssl bool) string {
-	if ssl {
-		return USTBVpnHttpsScheme + "://" + al.Host + "/do-login"
-	}
-	return USTBVpnHttpScheme + "://" + al.Host + "/do-login"
-}
-
-func (al *AutoLogin) LogoutAddr(ssl bool) string {
-	if ssl {
-		return USTBVpnHttpsScheme + "://" + al.Host + "/do-confirm-login"
-	}
-	return USTBVpnHttpScheme + "://" + al.Host + "/do-confirm-login"
+	return err
 }
 
 // create http request client with SSLEnabled and skipTLSVerify as config
-// checkRedirect will be passed into http.Client as CheckRedirect func if it is specified.
-// If force is true, it will enable "InsecureSkipVerify" forcely
-// even if current connection is under http (may be redirected to https)
-func (al *AutoLogin) NewHttpClient(force bool, checkRedirect func(req *http.Request, via []*http.Request) error) *http.Client {
+func (al *AutoLogin) NewHttpClient(checkRedirect func(req *http.Request, via []*http.Request) error) *http.Client {
 	hc := http.Client{}
-	if (force || al.SSLEnabled) && al.SkipTLSVerify {
+	if al.SkipTLSVerify {
 		hc.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -73,173 +79,200 @@ func (al *AutoLogin) NewHttpClient(force bool, checkRedirect func(req *http.Requ
 
 // VpnLogin login vpn automatically and get cookie
 func (al *AutoLogin) VpnLogin(uname, passwd string) ([]*http.Cookie, error) {
-	// send a get request and check whether it is https protocol.
-	// and save https enable/disable flag
-	if httpsEnabled, err := al.testHttpsEnabled(al.Host); err != nil {
+	al.SSLEnabled = true // SMU VPN uses HTTPS
+
+	hc := al.NewHttpClient(nil)
+	if jar, err := cookiejar.New(nil); err != nil {
 		return nil, err
 	} else {
-		if httpsEnabled {
-			al.SSLEnabled = true
-		}
+		hc.Jar = jar
 	}
 
-	var loginAddress = al.LoginAddr(al.SSLEnabled)
-
-	form := url.Values{
-		"auth_type": {"local"},
-		"sms_code":  {""},
-		"username":  {uname},
-		"password":  {passwd},
-	}
-
-	// disable redirection here
-	// If login success, it will be redirected to index page
-	// and cookie would lost if we enable redirection.
-	redirect := func(req *http.Request, via []*http.Request) error {
-		// if upgrade http to https
-		return http.ErrUseLastResponse
-	}
-	hc := al.NewHttpClient(false, redirect)
-
-	req, err := http.NewRequest("POST", loginAddress, strings.NewReader(form.Encode())) // todo missing http.
+	captcha, err := al.getCaptcha(hc)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	if resp, err := hc.Do(req); err != nil {
+	ticket, err := al.sendLogin(uname, passwd, captcha, hc)
+	if err != nil {
 		return nil, err
-	} else {
-		defer resp.Body.Close()
-		cookies := resp.Cookies()
-		// return cookies or error.
-		if len(cookies) == 0 {
-			return nil, errors.New(fmt.Sprintf("no cookie while auto login to %s ", loginAddress))
-		} else {
-			// test connection and logout account if we have login.
-			if err := al.testConnect(uname, cookies); err != nil {
-				return nil, err
-			}
-			return cookies, nil
-		}
 	}
+
+	if err := al.redirectLogin(hc, ticket); err != nil {
+		return nil, err
+	}
+
+	u, _ := url.Parse("https://" + SMUVpnHost)
+	return hc.Jar.Cookies(u), nil
 }
 
-func (al *AutoLogin) testHttpsEnabled(host string) (bool, error) {
-	testUrl, err := url.Parse(USTBVpnHttpScheme + "://" + host + "/")
+func (al *AutoLogin) getCaptcha(client *http.Client) (string, error) {
+	headers := http.Header{
+		"Accept":             {"image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"},
+		"Accept-Language":    {"en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7"},
+		"Connection":         {"keep-alive"},
+		"Host":               {SMUVpnHost},
+		"Referer":            {"https://webvpn.smu.edu.cn/https/536d756973666f726d616c46696d6d75bec2cf24168ae597f8d50e40b9f6/login.jsp?service=https%3A%2F%2Fwebvpn.smu.edu.cn%2Flogin%3Fcas_login%3Dtrue"},
+		"Sec-Fetch-Dest":     {"image"},
+		"Sec-Fetch-Mode":     {"no-cors"},
+		"Sec-Fetch-Site":     {"same-origin"},
+		"User-Agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"},
+		"sec-ch-ua":          {`"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"`},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"Windows"`},
+	}
+
+	req, err := http.NewRequest("GET", CaptchaUrl, nil)
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	httpsSupport := false
-
-	// disable redirection
-	// if login success, it will be redirected to index page
-	// and cookie would lost if we enable redirection.
-	redirect := func(req *http.Request, via []*http.Request) error {
-		// if upgrade http to https
-		if testUrl.Scheme != req.URL.Scheme && testUrl.Path == req.URL.Path { // is http -> https redirection
-			httpsSupport = true
-			return nil
-		}
-		return http.ErrUseLastResponse
-	}
-	hc := al.NewHttpClient(true, redirect)
-
-	req, err := http.NewRequest("GET", testUrl.String(), nil)
+	req.Header = headers
+	q := req.URL.Query()
+	q.Add("vpn-1", "")
+	req.URL.RawQuery = "vpn-1" // Force query string to match python script exactly if needed, though Add should work. Python uses params='vpn-1' which might be key only.
+	// Requests params='vpn-1' results in ?vpn-1.
+	
+	resp, err := client.Do(req)
 	if err != nil {
-		return false, err
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	imgData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
 	}
 
-	if resp, err := hc.Do(req); err != nil {
-		return false, err
-	} else {
-		defer resp.Body.Close()
-		return httpsSupport, nil
+	// If handler is provided, use it
+	if al.CaptchaHandler != nil {
+		return al.CaptchaHandler(imgData)
 	}
+
+	// Fallback to file-based approach
+	// Save image to temp file
+	file, err := os.CreateTemp("", "captcha-*.jpg")
+	if err != nil {
+		return "", err
+	}
+	// We don't remove the file immediately so user can see it.
+	// defer os.Remove(file.Name()) 
+	
+	if _, err := file.Write(imgData); err != nil {
+		file.Close()
+		return "", err
+	}
+	file.Close()
+
+	fmt.Printf("Captcha image saved to %s. Opening...\n", file.Name())
+	if err := openFile(file.Name()); err != nil {
+		fmt.Printf("Failed to open image automatically: %v. Please open it manually.\n", err)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("请输入验证码: ")
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(text), nil
 }
 
-func (al *AutoLogin) testConnect(uname string, cookies []*http.Cookie) error {
-	hc := al.NewHttpClient(false, nil)
+func (al *AutoLogin) sendLogin(account, password, captcha string, client *http.Client) (string, error) {
+	passwordMd5 := md5.Sum([]byte(password))
+	passwordMd5Str := hex.EncodeToString(passwordMd5[:])
 
-	req, err := http.NewRequest("GET", al.TestAddr(al.SSLEnabled), nil) // // todo missing http.
+	data := url.Values{
+		"loginName":       {account},
+		"password":        {passwordMd5Str},
+		"randcodekey":     {captcha},
+		"locationBrowser": {"谷歌浏览器[Chrome]"},
+		"appid":           {"3516472"},
+		"redirect":        {"https://webvpn.smu.edu.cn/login?cas_login=true"},
+		"strength":        {"3"},
+	}
+
+	headers := http.Header{
+		"Accept":                {"*/*"},
+		"Accept-Language":       {"zh-CN,zh;q=0.9"},
+		"Connection":            {"keep-alive"},
+		"Content-Type":          {"application/x-www-form-urlencoded; charset=UTF-8"},
+		"Host":                  {SMUVpnHost},
+		"Origin":                {"https://" + SMUVpnHost},
+		"Referer":               {"https://webvpn.smu.edu.cn/https/536d756973666f726d616c46696d6d75bec2cf24168ae597f8d50e40b9f6/login.jsp?service=https%3A%2F%2Fwebvpn.smu.edu.cn%2Flogin%3Fcas_login%3Dtrue"},
+		"Sec-Fetch-Dest":        {"empty"},
+		"Sec-Fetch-Mode":        {"cors"},
+		"Sec-Fetch-Site":        {"same-origin"},
+		"User-Agent":            {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"},
+		"X-KL-kis-Ajax-Request": {"Ajax_Request"},
+		"X-Requested-With":      {"XMLHttpRequest"},
+		"sec-ch-ua":             {`"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"`},
+		"sec-ch-ua-mobile":      {"?0"},
+		"sec-ch-ua-platform":    {`"Windows"`},
+	}
+
+	req, err := http.NewRequest("POST", LoginUrl, strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header = headers
+	req.URL.RawQuery = "vpn-12-o2-uis.smu.edu.cn"
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	bodyString := string(bodyBytes)
+
+	if resp.StatusCode == 200 && strings.Contains(bodyString, "成功") {
+		var respJson map[string]interface{}
+		if err := json.Unmarshal(bodyBytes, &respJson); err != nil {
+			return "", err
+		}
+		fmt.Println("登录成功")
+		if ticket, ok := respJson["ticket"].(string); ok {
+			return ticket, nil
+		}
+		return "", errors.New("ticket not found in response")
+	}
+	return "", fmt.Errorf("登录失败，原因：%s", bodyString)
+}
+
+func (al *AutoLogin) redirectLogin(client *http.Client, ticket string) error {
+	params := url.Values{
+		"cas_login": {"true"},
+		"ticket":    {ticket},
+	}
+
+	headers := http.Header{
+		"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+		"Accept-Language":           {"zh-CN,zh;q=0.9"},
+		"Connection":                {"keep-alive"},
+		"Host":                      {SMUVpnHost},
+		"Referer":                   {"https://webvpn.smu.edu.cn/https/536d756973666f726d616c46696d6d75bec2cf24168ae597f8d50e40b9f6/login.jsp?service=https%3A%2F%2Fwebvpn.smu.edu.cn%2Flogin%3Fcas_login%3Dtrue"},
+		"Upgrade-Insecure-Requests": {"1"},
+		"User-Agent":                {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"},
+	}
+
+	req, err := http.NewRequest("GET", RedirectUrl, nil)
 	if err != nil {
 		return err
 	}
+	req.Header = headers
+	req.URL.RawQuery = params.Encode()
 
-	jar, _ := cookiejar.New(nil)
-	jar.SetCookies(req.URL, cookies)
-	hc.Jar = jar
-
-	if resp, err := hc.Do(req); err != nil {
+	resp, err := client.Do(req)
+	if err != nil {
 		return err
-	} else {
-		defer resp.Body.Close()
-		if found, token, err := al.findLogoutToken(resp.Body); err != nil {
-			return err
-		} else {
-			if found {
-				if !al.ForceLogout { // if force logout is not enabled, just return an error.
-					return errors.New("you account have been signed in on other device")
-				}
-				log.WithField("token", token).Info("found logout token, we will logout account.")
-				log.Info("sending logout request.")
-				if err := al.logoutAccount(uname, token, cookies); err != nil {
-					return err
-				}
-			}
-			// if we did not found token in http response body, we do nothing.
-		}
 	}
+	defer resp.Body.Close()
+	
+	// We just need to execute this request to set cookies/session state
 	return nil
-}
-
-func (al *AutoLogin) findLogoutToken(rd io.Reader) (bool, string, error) {
-	reader := bufio.NewReader(rd)
-	for {
-		// read a line
-		if line, _, err := reader.ReadLine(); err != nil {
-			break
-		} else {
-			// if matched.
-			matched, _ := regexp.Match(`logoutOtherToken[\s]+=[\s]+'[\w]+`, line)
-			if matched { // matched
-				subString := strings.Split(string(line), `'`)
-				if len(subString) >= 2 {
-					return true, subString[1], nil
-				} else {
-					return false, "", errors.New("logout token not fount")
-				}
-			}
-		}
-	}
-	return false, "", nil
-}
-
-func (al *AutoLogin) logoutAccount(uname, token string, cookies []*http.Cookie) error {
-	form := url.Values{
-		"logoutOtherToken": {token},
-		"username":         {uname},
-	}
-
-	hc := al.NewHttpClient(false, nil)
-
-	req, err := http.NewRequest("POST", al.LogoutAddr(al.SSLEnabled),
-		strings.NewReader(form.Encode()))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	jar, _ := cookiejar.New(nil)
-	jar.SetCookies(req.URL, cookies)
-	hc.Jar = jar
-
-	if resp, err := hc.Do(req); err != nil {
-		return err
-	} else {
-		defer resp.Body.Close()
-		return nil // ok
-	}
 }

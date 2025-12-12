@@ -9,76 +9,54 @@ import (
 )
 
 type VpnSettingsUI struct {
+	uiVpnEnable      *widget.Check
 	uiVpnForceLogout *widget.Check
 	uiVpnHostEncrypt *widget.Check
 	uiVpnHostInput   *widget.Entry
 	uiVpnUsername    *widget.Entry
 	uiVpnPassword    *widget.Entry
-	uiVpnAuthMethod  *widget.RadioGroup
 }
 
-func (v *VpnSettingsUI) OpenVpnSettings(wssApp *fyne.App, pref fyne.Preferences) {
+func (v *VpnSettingsUI) Init(pref fyne.Preferences) {
+	v.uiVpnEnable = newCheckbox("enable smu vpn", true, nil)
 	v.uiVpnForceLogout = newCheckbox("", true, nil)
 	v.uiVpnHostEncrypt = newCheckbox("", true, nil)
 	v.uiVpnHostInput = &widget.Entry{PlaceHolder: "vpn hostname", Text: "n.ustb.edu.cn"}
 	v.uiVpnUsername = &widget.Entry{PlaceHolder: "vpn username", Text: ""}
 	v.uiVpnPassword = &widget.Entry{PlaceHolder: "vpn password", Text: "", Password: true}
 
-	// select auth method
-	v.uiVpnAuthMethod = widget.NewRadioGroup([]string{TextVpnAuthMethodPasswd, TextVpnAuthMethodQrCode}, func(value string) {
-		// todo:
-	})
-	v.uiVpnAuthMethod.Horizontal = true
-
 	// load Preference
-	loadVpnPreference(pref, v.uiVpnAuthMethod, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
+	loadVPNMainPreference(pref, v.uiVpnEnable)
+	// pass nil as auth method radio group, as we removed it.
+	loadVpnPreference(pref, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
+}
 
-	content := container.NewVBox(
+func (v *VpnSettingsUI) Save(pref fyne.Preferences) {
+	saveVPNMainPreference(pref, v.uiVpnEnable)
+	saveVPNPreference(pref, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
+}
+
+func (v *VpnSettingsUI) GetContainer() *fyne.Container {
+	return container.NewVBox(
 		&widget.Form{Items: []*widget.FormItem{
+			{Text: "enable", Widget: v.uiVpnEnable},
 			{Text: "force logout", Widget: v.uiVpnForceLogout},
 			{Text: "host encrypt", Widget: v.uiVpnHostEncrypt},
 			{Text: "vpn host", Widget: v.uiVpnHostInput},
-			{Text: "auth method", Widget: v.uiVpnAuthMethod},
+			{Text: "username", Widget: v.uiVpnUsername},
+			{Text: "password", Widget: v.uiVpnPassword},
 		}},
-		&widget.Separator{},
-		container.NewAppTabs(
-			container.NewTabItem("Password Auth",
-				&widget.Form{Items: []*widget.FormItem{
-					{Text: "username", Widget: v.uiVpnUsername},
-					{Text: "password", Widget: v.uiVpnPassword},
-				}}),
-			container.NewTabItem("QR Code Auth", widget.NewLabel("World!")),
-		),
-		container.NewVBox(),
 	)
-
-	authWindow := (*wssApp).NewWindow("VPN Auth Settings")
-	authWindow.SetContent(content)
-	authWindow.Resize(fyne.NewSize(400, 0))
-	authWindow.SetOnClosed(func() {
-		// saveVpnMainPreference store the values from vpn UI to filesystem
-		saveVPNPreference(pref, v.uiVpnAuthMethod, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
-	})
-	authWindow.Show()
 }
 
 func (v *VpnSettingsUI) LoadSettingsValues(values *vpn.UstbVpn) {
+	values.Enable = v.uiVpnEnable.Checked
 	values.ForceLogout = v.uiVpnForceLogout.Checked
 	values.HostEncrypt = v.uiVpnHostEncrypt.Checked
 	values.TargetVpn = v.uiVpnHostInput.Text
-	values.AuthMethod = getAuthMethodInt(v.uiVpnAuthMethod)
+	values.AuthMethod = vpn.VpnAuthMethodPasswd
 	values.PasswdAuth = passwd.UstbVpnPasswdAuth{
 		Username: v.uiVpnUsername.Text,
 		Password: v.uiVpnPassword.Text,
 	}
-}
-
-// convert from  selected string to int value
-func getAuthMethodInt(uiVpnAuthMethod *widget.RadioGroup) int {
-	if uiVpnAuthMethod.Selected == TextVpnAuthMethodPasswd {
-		return vpn.VpnAuthMethodPasswd
-	} else if uiVpnAuthMethod.Selected == TextVpnAuthMethodQrCode {
-		return vpn.VpnAuthMethodQRCode
-	}
-	return vpn.VpnAuthMethodPasswd
 }
