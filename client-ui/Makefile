@@ -1,52 +1,63 @@
-# makefile for crossing building on macOS
-# supported os: windows, macOS
 
-# make sure fyne is installed before packaging (see: https://developer.fyne.io/started/packaging).
+PACKAGE_PATH := github.com/rep1ace/wssocks-plugin-smu/client-ui
+APP_NAME     := wssocks-smu-client
+APP_ID       := wssocks-smu-client-ui.rep1ace.github.com
+VERSION      := 0.7.0
+BUILD_NUM    := 5
+ICON         := app-512.png
 
-PHONY: clean all package package-windows
+CC_WIN       := x86_64-w64-mingw32-gcc
+CC_MAC       := clang
+FYNE         := fyne
 
-PACKAGE=github.com/rep1ace/wssocks-plugin-smu/client-ui
-FLAGS=--trimpath
-appID=wssocks-smu-client-ui.rep1ace.github.com
-appName="wssocks-smu client"
-APP_VERSION=0.7.0
-PACKAGE_FLAG=-icon app-512.png -appID ${appID} --appVersion ${APP_VERSION} -release -appBuild 5
+GOFLAGS      := -trimpath
+LDFLAGS_WIN  := -H=windowsgui
+PKG_FLAGS    := -icon $(ICON) -appID $(APP_ID) -appVersion $(VERSION) -appBuild $(BUILD_NUM) -release
 
-all: wssocks-smu-ui-macOS-amd64 wssocks-smu-ui-macOS-arm64 wssocks-smu-ui-windows-amd64.exe # wssocks-smu-ui-linux-amd64
 
-wssocks-smu-ui-macOS-amd64:
-	CC=clang CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build ${FLAGS} -o wssocks-smu-ui-macOS-amd64 ${PACKAGE}
+.PHONY: all clean package package-windows package-mac
 
-wssocks-smu-ui-macOS-arm64:
-	CC=clang CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build ${FLAGS} -o wssocks-smu-ui-macOS-arm64 ${PACKAGE}
+all: package
 
-wssocks-smu-ui-windows-amd64.exe:
-	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build ${FLAGS} -ldflags "-H=windowsgui" -o wssocks-smu-ui-windows-amd64.exe ${PACKAGE}
 
-wssocks-smu-ui-macOS-universal: wssocks-smu-ui-macOS-amd64 wssocks-smu-ui-macOS-arm64
+# macOS AMD64 Binary
+bin-mac-amd64:
+	CC=$(CC_MAC) CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o wssocks-smu-ui-macOS-amd64 $(PACKAGE_PATH)
+
+# macOS ARM64 Binary
+bin-mac-arm64:
+	CC=$(CC_MAC) CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build $(GOFLAGS) -o wssocks-smu-ui-macOS-arm64 $(PACKAGE_PATH)
+
+# macOS Universal Binary
+bin-mac-universal: bin-mac-amd64 bin-mac-arm64
 	lipo wssocks-smu-ui-macOS-amd64 wssocks-smu-ui-macOS-arm64 -create -output wssocks-smu-ui-macOS-universal
 
-# wssocks-smu-ui-linux-amd64:
-# 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o wssocks-smu-ui-linux-amd64 ${PACKAGE}
+# Windows AMD64 Binary
+bin-win-amd64:
+	CC=$(CC_WIN) CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build $(GOFLAGS) -ldflags "$(LDFLAGS_WIN)" -o wssocks-smu-ui-windows-amd64.exe $(PACKAGE_PATH)
 
-# packaging
-package: client-ui-macOS-universal.app client-ui-windows-amd64.exe # client-ui-linux-amd64
+bin-linux-amd64:
+	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build $(GOFLAGS) -o wssocks-smu-ui-linux-amd64 $(PACKAGE_PATH)
 
-client-ui-macOS-universal.app: wssocks-smu-ui-macOS-universal
-	CC=clang CGO_ENABLED=1 GOOS=darwin fyne package -os darwin ${PACKAGE_FLAG} -executable wssocks-smu-ui-macOS-universal -name ${appName}
-	rm -rf client-ui-macOS-universal.app; mv ${appName}.app client-ui-macOS-universal.app
 
-client-ui-windows-amd64.exe: wssocks-smu-ui-windows-amd64.exe
-	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 fyne package -os windows ${PACKAGE_FLAG} -executable wssocks-smu-ui-windows-amd64.exe -name ${appName}.exe
-	mv ${appName}.exe client-ui-windows-amd64.exe
+package: package-mac package-windows package-linux
 
-# export CGO_CFLAGS='-D _POSIX'
 
-# client-ui-linux-amd64:
+package-windows: bin-win-amd64
+	$(FYNE) package -os windows $(PKG_FLAGS) -executable wssocks-smu-ui-windows-amd64.exe -name $(APP_NAME).exe
+	mv $(APP_NAME).exe client-ui-windows-amd64.exe
+	@echo "✅ Windows package created: client-ui-windows-amd64.exe"
+
+
+package-mac: bin-mac-universal
+	$(FYNE) package -os darwin $(PKG_FLAGS) -executable wssocks-smu-ui-macOS-universal -name $(APP_NAME)
+	rm -rf client-ui-macOS-universal.app
+	mv $(APP_NAME).app client-ui-macOS-universal.app
+	@echo "✅ macOS package created: client-ui-macOS-universal.app"
+
+package-linux: bin-linux-amd64
+	@echo "✅ Linux binary ready: wssocks-smu-ui-linux-amd64"
+
 
 clean:
-	rm -rf wssocks-smu-ui-macOS-amd64 wssocks-smu-ui-macOS-arm64 wssocks-smu-ui-macOS-universal wssocks-smu-ui-windows-amd64.exe client-ui-macOS-universal.app client-ui-windows-amd64.exe
-	rm -rf wssocks-smu-client fyne.syso
-
-package-windows:
-	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 fyne package --target windows --icon app-512.png --name "wssocks-smu-client" --app-id wssocks-smu-client-ui.rep1ace.github.com --release
+	rm -rf wssocks-smu-ui-* client-ui-* *.app *.exe fyne.syso
