@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"net"
 	"net/url"
 	"runtime"
 
@@ -11,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -28,6 +30,7 @@ const (
 	CoreGithubRepoUrl = "https://github.com/genshen/wssocks"
 	GithubRepoUrl     = "https://github.com/genshen/wssocks-plugin-ustb"
 	DocumentUrl       = "https://genshen.github.io/wssocks-plugin-ustb/"
+	MutexName         = "Global\\wssocks-plugin-ustb-client-ui"
 )
 
 //go:embed app-512.png
@@ -63,7 +66,51 @@ func newCheckbox(text string, checked bool, onChanged func(bool)) *widget.Check 
 	return checkbox
 }
 
+var localLockListener net.Listener
+
+func acquireLocalLock() bool {
+	var err error
+	localLockListener, err = net.Listen("tcp", "127.0.0.1:37539")
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func main() {
+	if !acquireLocalLock() {
+		// show a simple error dialog or just exit
+		// Since we can't easily show a dialog without an app instance, we'll try to create a temp one
+		// or just exit. A temp app instance for just a dialog is fine.
+		app := app.New()
+		w := app.NewWindow("Error")
+		w.SetContent(widget.NewLabel("Another instance is already running."))
+		w.SetFixedSize(true)
+		w.Resize(fyne.NewSize(300, 100))
+		w.CenterOnScreen()
+		// Show the window and close it after a short delay or let user close it?
+		// Usually showing an error and waiting for user close is better.
+		w.Show()
+		// We use a timer to auto-close to avoid hanging if the user doesn't see it (optional, but requested behavior was just "detect")
+		// But usually "exit nicely" implies notifying the user.
+		// Let's just run it.
+		// app.Run() would block.
+		// Let's just exit for now as per minimal requirement, or better:
+		// Just return, effectively exiting. The user might miss it if silent.
+		// But creating a full Fyne app just to say "error" might be slow/overkill?
+		// Actually, standard behavior is silent exit or focus focus existing.
+		// Focusing existing is hard cross-platform.
+		// Let's just logging and exit for CLI, or maybe a quick dialog.
+		// Given the simplicity, let's just return for now to ensure it works.
+		// If I want to be nice:
+		// fmt.Println("Another instance is running.")
+		return
+	}
+	// Defer close not strictly necessary as OS cleans up on exit, but good practice.
+	if localLockListener != nil {
+		defer localLockListener.Close()
+	}
+
 	wssApp := app.NewWithID(AppId)
 	wssApp.Settings().SetTheme(&myTheme{})
 	wssApp.SetIcon(fyne.NewStaticResource("icon", appIconData))
@@ -79,8 +126,9 @@ func main() {
 	uiHttpEnable := newCheckbox("", false, nil)
 	uiHttpLocalAddr := &widget.Entry{PlaceHolder: "http listen address", Text: "127.0.0.1:1086"}
 	uiSkipTSLVerify := newCheckbox("", false, nil)
+	uiSaveToken := newCheckbox("save token", false, nil)
 
-	loadBasicPreference(wssApp.Preferences(), uiLocalAddr, uiRemoteAddr, uiHttpLocalAddr, uiHttpEnable, uiSkipTSLVerify)
+	loadBasicPreference(wssApp.Preferences(), uiLocalAddr, uiRemoteAddr, uiHttpLocalAddr, uiAuthToken, uiHttpEnable, uiSkipTSLVerify, uiSaveToken)
 
 	uiHttpEnable.OnChanged = func(checked bool) {
 		if checked {
@@ -108,6 +156,10 @@ func main() {
 			btnStart.SetText("Start")
 			btnStatus = btnStopped
 		} else if btnStatus == btnStopped { // stopped can run
+			if vpnUiValue := onLoadValue(); vpnUiValue.Enable && vpnUiValue.PasswdAuth.Password == "" {
+				dialog.ShowInformation("Error", "Please input vpn password", w)
+				return
+			}
 			options := extra.Options{
 				Options: client.Options{
 					LocalSocks5Addr: uiLocalAddr.Text,
@@ -175,6 +227,7 @@ func main() {
 		{Text: "socks5 address", Widget: uiLocalAddr},
 		{Text: "remote address", Widget: uiRemoteAddr},
 		{Text: "auth token", Widget: uiAuthToken},
+		{Text: "", Widget: uiSaveToken},
 		{Text: "http(s) proxy", Widget: uiHttpEnable},
 		{Text: "http(s) address", Widget: uiHttpLocalAddr},
 		{Text: "skip TSL verify", Widget: uiSkipTSLVerify},
@@ -236,6 +289,50 @@ func main() {
 		),
 	))
 
+	savePreferences := func() {
+		if btnStatus == btnRunning { // running can stop
+		}
+		saveBasicPreference(wssApp.Preferences(), uiLocalAddr, uiRemoteAddr, uiHttpLocalAddr, uiAuthToken, uiHttpEnable, uiSkipTSLVerify, uiSaveToken)
+		onVpnClose()
+	}
+
+	if desk, ok := wssApp.(desktop.App); ok {
+		m := fyne.NewMenu(AppName,
+			fyne.NewMenuItem("Show Window", func() {
+				w.Show()
+			}),
+			fyne.NewMenuItem("Copy Proxy Command", nil),
+			fyne.NewMenuItem("Exit", func() {
+				// Stop if running
+				if btnStatus == btnRunning {
+					btnStatus = btnStopping
+					btnStart.SetText("Stopping")
+					handles.NotifyCloseWrapper()
+				}
+				savePreferences()
+				wssApp.Quit()
+			}),
+		)
+		m.Items[1].ChildMenu = fyne.NewMenu("",
+			fyne.NewMenuItem("Git", func() {
+				copyToClipboard(ProxyCommandGit, uiLocalAddr.Text, uiHttpLocalAddr.Text, w)
+			}),
+			fyne.NewMenuItem("HTTP/HTTPS", func() {
+				copyToClipboard(ProxyCommandHttp, uiLocalAddr.Text, uiHttpLocalAddr.Text, w)
+			}),
+			fyne.NewMenuItem("SSH/SFTP/SCP", func() {
+				copyToClipboard(ProxyCommandSsh, uiLocalAddr.Text, uiHttpLocalAddr.Text, w)
+			}),
+		)
+		desk.SetSystemTrayMenu(m)
+		desk.SetSystemTrayWindow(w)
+	}
+
+	w.SetCloseIntercept(func() {
+		savePreferences()
+		w.Hide()
+	})
+
 	w.SetOnClosed(func() {
 		// todo close all and stop if network lost
 		if btnStatus == btnRunning { // running can stop
@@ -243,8 +340,7 @@ func main() {
 			btnStart.SetText("Stopping")
 			handles.NotifyCloseWrapper()
 		}
-		saveBasicPreference(wssApp.Preferences(), uiLocalAddr, uiRemoteAddr, uiHttpLocalAddr, uiHttpEnable, uiSkipTSLVerify)
-		onVpnClose()
+		savePreferences()
 	})
 	//w.SetOnClosed() todo
 	w.ShowAndRun()
@@ -264,8 +360,9 @@ func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
 			QrCodeAuth: newQrCodeAuth(wssApp),
 			CaptchaHandler: func(imgData []byte) (string, error) {
 				// Create a channel to receive the result
-				resultChan := make(chan string)
-				errChan := make(chan error)
+				// Use buffered channels to prevent deadlock if dialog callback fires after return
+				resultChan := make(chan string, 1)
+				errChan := make(chan error, 1)
 
 				// Run UI operations on the main thread
 				// The threading issue specifically: callbacks from core are not on UI thread.
@@ -286,7 +383,8 @@ func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
 						entry,
 					)
 
-					d := dialog.NewCustomConfirm("Enter Captcha", "OK", "Cancel", content, func(ok bool) {
+					var d dialog.Dialog
+					d = dialog.NewCustomConfirm("Enter Captcha", "OK", "Cancel", content, func(ok bool) {
 						if ok {
 							resultChan <- entry.Text
 						} else {
@@ -294,7 +392,25 @@ func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
 						}
 					}, (*wssApp).Driver().AllWindows()[0]) // Assuming the main window is the first one or active one.
 
+					// Submit on Enter
+					entry.OnSubmitted = func(_ string) {
+						resultChan <- entry.Text
+						d.Hide()
+					}
+
 					d.Show()
+
+					// Attempt to focus with a slight delay if immediate doesn't work, but typically immediate is fine if shown
+					// Actually, Fyne recommends focusing after Show().
+					// Using a goroutine with slight delay can sometimes help if the window isn't fully ready,
+					// but let's try direct first.
+					if w := (*wssApp).Driver().AllWindows(); len(w) > 0 {
+						w[0].Canvas().Focus(entry)
+					}
+
+					// Also, to be safe, we can reuse the known window 'w' from closure if 'driver.AllWindows' is unreliable?
+					// But we are in a closure where 'w' (from main) is not directly available, only wssApp.
+					// The logic above used (*wssApp).Driver().AllWindows()[0], assuming main window.
 				})
 
 				select {
@@ -330,6 +446,7 @@ func NewWSelectWithCopyProxyCommand(options []string, changed func(sel *widget.S
 func copyToClipboard(category int, socksAddr string, httpAddr string, win fyne.Window) {
 	var text = ""
 	var nc = "nc -x" // darwin or linux
+	var ncCmdType = "ncat"
 	if runtime.GOOS == "windows" {
 		nc = "connect -S"
 	}
@@ -341,7 +458,11 @@ func copyToClipboard(category int, socksAddr string, httpAddr string, win fyne.W
 		text = fmt.Sprintf("export https_proxy=http://%s http_proxy=http://%s", socksAddr, httpAddr)
 		break
 	case ProxyCommandSsh:
-		text = fmt.Sprintf("ssh -o ProxyCommand='%s %s %%h %%p'", nc, socksAddr)
+		if runtime.GOOS == "windows" && ncCmdType == "ncat" {
+			text = fmt.Sprintf("ssh -o ProxyCommand='ncat --proxy %s --proxy-type socks5 %%h %%p'", socksAddr)
+		} else {
+			text = fmt.Sprintf("ssh -o ProxyCommand='%s %s %%h %%p'", nc, socksAddr)
+		}
 		break
 	}
 	win.Clipboard().SetContent(text)

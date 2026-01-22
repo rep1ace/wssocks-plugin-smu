@@ -21,7 +21,7 @@ wssocks-ustb-ui-macOS-arm64:
 	CC=clang CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build ${FLAGS} -o wssocks-ustb-ui-macOS-arm64 ${PACKAGE}
 
 wssocks-ustb-ui-windows-amd64.exe:
-	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build ${FLAGS} -ldflags -H=windowsgui -o wssocks-ustb-ui-windows-amd64.exe ${PACKAGE}
+	CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build ${FLAGS} -ldflags "-H=windowsgui" -o wssocks-ustb-ui-windows-amd64.exe ${PACKAGE}
 
 wssocks-ustb-ui-macOS-universal: wssocks-ustb-ui-macOS-amd64 wssocks-ustb-ui-macOS-arm64
 	lipo wssocks-ustb-ui-macOS-amd64 wssocks-ustb-ui-macOS-arm64 -create -output wssocks-ustb-ui-macOS-universal

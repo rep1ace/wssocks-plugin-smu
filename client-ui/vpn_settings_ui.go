@@ -15,6 +15,7 @@ type VpnSettingsUI struct {
 	uiVpnHostInput   *widget.Entry
 	uiVpnUsername    *widget.Entry
 	uiVpnPassword    *widget.Entry
+	uiSavePassword   *widget.Check
 }
 
 func (v *VpnSettingsUI) Init(pref fyne.Preferences) {
@@ -24,16 +25,17 @@ func (v *VpnSettingsUI) Init(pref fyne.Preferences) {
 	v.uiVpnHostInput = &widget.Entry{PlaceHolder: "vpn hostname", Text: "n.ustb.edu.cn"}
 	v.uiVpnUsername = &widget.Entry{PlaceHolder: "vpn username", Text: ""}
 	v.uiVpnPassword = &widget.Entry{PlaceHolder: "vpn password", Text: "", Password: true}
+	v.uiSavePassword = newCheckbox("save password", false, nil)
 
 	// load Preference
 	loadVPNMainPreference(pref, v.uiVpnEnable)
 	// pass nil as auth method radio group, as we removed it.
-	loadVpnPreference(pref, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
+	loadVpnPreference(pref, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiSavePassword, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
 }
 
 func (v *VpnSettingsUI) Save(pref fyne.Preferences) {
 	saveVPNMainPreference(pref, v.uiVpnEnable)
-	saveVPNPreference(pref, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
+	saveVPNPreference(pref, v.uiVpnForceLogout, v.uiVpnHostEncrypt, v.uiSavePassword, v.uiVpnHostInput, v.uiVpnUsername, v.uiVpnPassword)
 }
 
 func (v *VpnSettingsUI) GetContainer() *fyne.Container {
@@ -45,6 +47,7 @@ func (v *VpnSettingsUI) GetContainer() *fyne.Container {
 			{Text: "vpn host", Widget: v.uiVpnHostInput},
 			{Text: "username", Widget: v.uiVpnUsername},
 			{Text: "password", Widget: v.uiVpnPassword},
+			{Text: "", Widget: v.uiSavePassword},
 		}},
 	)
 }

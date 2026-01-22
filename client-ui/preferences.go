@@ -22,14 +22,24 @@ const (
 	PrefVpnHostInput   = "vpn_host"
 	PrefVpnUsername    = "vpn_username"
 	PrefVpnPassword    = "vpn_password"
+	PrefSaveVpnPwd     = "save_vpn_password"
+	PrefAuthToken      = "auth_token"
+	PrefSaveToken      = "save_token"
 )
 
 func saveBasicPreference(pref fyne.Preferences, uiLocalAddr, uiRemoteAddr,
-	uiHttpLocalAddr *widget.Entry, uiHttpEnable *widget.Check,
-	uiSkipTSLVerify *widget.Check) {
+	uiHttpLocalAddr, uiAuthToken *widget.Entry, uiHttpEnable *widget.Check,
+	uiSkipTSLVerify, uiSaveToken *widget.Check) {
 	pref.SetBool(PrefHasPreference, true)
 	pref.SetString(PrefLocalAddr, uiLocalAddr.Text)
 	pref.SetString(PrefRemoteAddr, uiRemoteAddr.Text)
+
+	pref.SetBool(PrefSaveToken, uiSaveToken.Checked)
+	if uiSaveToken.Checked {
+		pref.SetString(PrefAuthToken, encrypt(uiAuthToken.Text))
+	} else {
+		pref.SetString(PrefAuthToken, "")
+	}
 
 	pref.SetBool(PrefHttpEnable, uiHttpEnable.Checked)
 	pref.SetString(PrefHttpLocalAddr, uiHttpLocalAddr.Text)
@@ -41,7 +51,7 @@ func saveVPNMainPreference(pref fyne.Preferences,
 	pref.SetBool(PrefVpnEnable, uiVpnEnable.Checked)
 }
 
-func saveVPNPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt *widget.Check,
+func saveVPNPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt, uiSaveVpnPwd *widget.Check,
 	uiVpnHostInput, uiVpnUsername, uiVpnPassword *widget.Entry) {
 	if !pref.Bool(PrefHasPreference) {
 		return
@@ -49,16 +59,22 @@ func saveVPNPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt
 
 	pref.SetBool(PrefVpnForceLogout, uiVpnForceLogout.Checked)
 	pref.SetBool(PrefVpnHostEncrypt, uiVpnHostEncrypt.Checked)
+	pref.SetBool(PrefSaveVpnPwd, uiSaveVpnPwd.Checked)
 	pref.SetString(PrefVpnHostInput, uiVpnHostInput.Text)
 	pref.SetString(PrefVpnUsername, uiVpnUsername.Text)
-	//pref.SetString(PrefVpnPassword,uiVpnPassword.Text)
+	if uiSaveVpnPwd.Checked && uiVpnPassword.Text != "" {
+		pref.SetString(PrefVpnPassword, encrypt(uiVpnPassword.Text))
+	} else {
+		pref.SetString(PrefVpnPassword, "")
+	}
 	pref.SetInt(PrefVpnAuthMethod, vpn.VpnAuthMethodPasswd)
 }
 
 func loadBasicPreference(pref fyne.Preferences, uiLocalAddr, uiRemoteAddr,
-	uiHttpLocalAddr *widget.Entry, uiHttpEnable *widget.Check,
-	uiSkipTSLVerify *widget.Check) {
+	uiHttpLocalAddr, uiAuthToken *widget.Entry, uiHttpEnable *widget.Check,
+	uiSkipTSLVerify, uiSaveToken *widget.Check) {
 	if !pref.Bool(PrefHasPreference) {
+
 		uiHttpLocalAddr.Disable()
 		return
 	}
@@ -80,8 +96,19 @@ func loadBasicPreference(pref fyne.Preferences, uiLocalAddr, uiRemoteAddr,
 		uiHttpLocalAddr.SetText(strings.TrimSpace(httpAddr))
 	}
 	// skip TSL verify
+	// skip TSL verify
 	if pref.Bool(PrefSkipTSLVerify) {
 		uiSkipTSLVerify.SetChecked(true)
+	}
+
+	// auth token
+	if saveToken := pref.Bool(PrefSaveToken); saveToken {
+		uiSaveToken.SetChecked(true)
+		if token := pref.String(PrefAuthToken); token != "" {
+			uiAuthToken.SetText(decrypt(token))
+		}
+	} else {
+		uiSaveToken.SetChecked(false)
 	}
 
 	if !uiHttpEnable.Checked {
@@ -100,7 +127,7 @@ func loadVPNMainPreference(pref fyne.Preferences, uiVpnEnable *widget.Check) {
 
 }
 
-func loadVpnPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt *widget.Check,
+func loadVpnPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt, uiSaveVpnPwd *widget.Check,
 	uiVpnHostInput, uiVpnUsername, uiVpnPassword *widget.Entry) {
 	if !pref.Bool(PrefHasPreference) {
 		return
@@ -121,7 +148,12 @@ func loadVpnPreference(pref fyne.Preferences, uiVpnForceLogout, uiVpnHostEncrypt
 	if username := pref.String(PrefVpnUsername); strings.TrimSpace(username) != "" {
 		uiVpnUsername.SetText(strings.TrimSpace(username))
 	}
-	//if password := pref.String(PrefVpnPassword); password != "" {
-	//	uiVpnPassword.SetText(password)
-	//}
+	if savePwd := pref.Bool(PrefSaveVpnPwd); savePwd {
+		uiSaveVpnPwd.SetChecked(true)
+		if password := pref.String(PrefVpnPassword); password != "" {
+			uiVpnPassword.SetText(decrypt(password))
+		}
+	} else {
+		uiSaveVpnPwd.SetChecked(false)
+	}
 }
