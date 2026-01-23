@@ -1,6 +1,6 @@
 
 PACKAGE_PATH := github.com/rep1ace/wssocks-plugin-smu/client-ui
-APP_NAME     := wssocks-smu-client
+APP_NAME     := WSSocks SMU Client
 APP_ID       := wssocks-smu-client-ui.rep1ace.github.com
 VERSION      := 0.7.0
 BUILD_NUM    := 5
@@ -43,20 +43,18 @@ package: package-mac package-windows package-linux
 
 
 package-windows: bin-win-amd64
-	CC=$(CC_WIN) CGO_ENABLED=1 GOOS=windows GOARCH=amd64 $(FYNE) package -os windows $(PKG_FLAGS) -executable wssocks-smu-ui-windows-amd64.exe -name $(APP_NAME).exe
-	mv $(APP_NAME).exe client-ui-windows-amd64.exe
+	CC=$(CC_WIN) CGO_ENABLED=1 GOOS=windows GOARCH=amd64 $(FYNE) package -os windows $(PKG_FLAGS) -executable wssocks-smu-ui-windows-amd64.exe -name "$(APP_NAME)".exe
+	mv "$(APP_NAME)".exe client-ui-windows-amd64.exe
 	@echo "✅ Windows package created: client-ui-windows-amd64.exe"
 
 
 package-mac: bin-mac-universal
-	$(FYNE) package -os darwin $(PKG_FLAGS) -executable wssocks-smu-ui-macOS-universal -name $(APP_NAME)
-	rm -rf client-ui-macOS-universal.app
-	mv $(APP_NAME).app client-ui-macOS-universal.app
-	@echo "✅ macOS package created: client-ui-macOS-universal.app"
+	$(FYNE) package -os darwin $(PKG_FLAGS) -executable wssocks-smu-ui-macOS-universal -name "$(APP_NAME)"
+	@echo "✅ macOS package created: wssocks-smu-client.app"
 
 package-linux: bin-linux-amd64
-	$(FYNE) package -os linux $(PKG_FLAGS) -executable wssocks-smu-ui-linux-amd64 --name $(APP_NAME)
-	mv $(APP_NAME).tar.xz client-ui-linux-amd64.tar.xz
+	$(FYNE) package -os linux $(PKG_FLAGS) -executable wssocks-smu-ui-linux-amd64 --name "$(APP_NAME)"
+	mv "$(APP_NAME)".tar.xz client-ui-linux-amd64.tar.xz
 	@echo "✅ Linux package created: client-ui-linux-amd64.tar.xz"
 clean:
 	rm -rf wssocks-smu-ui-* client-ui-* *.app *.exe fyne.syso

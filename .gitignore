@@ -26,3 +26,7 @@ client-ui/wssocks-smu-ui-macOS-universal
 client-ui/client-ui-macOS-universal.app/Contents/Info.plist
 client-ui/client-ui-macOS-universal.app/Contents/MacOS/wssocks-smu-ui-macOS-universal
 client-ui/client-ui-macOS-universal.app/Contents/Resources/icon.icns
+client-ui/WSSocks SMU Client.dmg
+client-ui/WSSocks SMU Client.app/Contents/Info.plist
+client-ui/WSSocks SMU Client.app/Contents/MacOS/wssocks-smu-ui-macOS-universal
+client-ui/WSSocks SMU Client.app/Contents/Resources/icon.icns
