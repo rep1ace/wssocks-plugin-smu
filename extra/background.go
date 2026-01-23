@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/genshen/wssocks-plugin-ustb/plugins/ver"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/ver"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
 	"github.com/genshen/wssocks/client"
 )
 

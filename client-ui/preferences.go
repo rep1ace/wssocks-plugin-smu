@@ -5,7 +5,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
 )
 
 const (

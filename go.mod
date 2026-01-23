@@ -1,4 +1,4 @@
-module github.com/genshen/wssocks-plugin-ustb
+module github.com/rep1ace/wssocks-plugin-smu
 
 go 1.19
 

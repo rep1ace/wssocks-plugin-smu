@@ -4,8 +4,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn/passwd"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
 )
 
 type VpnSettingsUI struct {

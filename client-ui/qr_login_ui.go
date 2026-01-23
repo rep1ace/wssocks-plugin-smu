@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	qrcode2 "github.com/genshen/wssocks-plugin-ustb/plugins/vpn/qrcode"
+	qrcode2 "github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/qrcode"
 	"github.com/skip2/go-qrcode"
 	"net/http"
 	"time"

@@ -20,3 +20,9 @@ extra/go-api/libwssocks_go_api.h
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+client-ui/wssocks-smu-ui-macOS-amd64
+client-ui/wssocks-smu-ui-macOS-arm64
+client-ui/wssocks-smu-ui-macOS-universal
+client-ui/client-ui-macOS-universal.app/Contents/Info.plist
+client-ui/client-ui-macOS-universal.app/Contents/MacOS/wssocks-smu-ui-macOS-universal
+client-ui/client-ui-macOS-universal.app/Contents/Resources/icon.icns

@@ -12,7 +12,7 @@ FYNE         := fyne
 
 GOFLAGS      := -trimpath
 LDFLAGS_WIN  := -H=windowsgui
-PKG_FLAGS    := -icon $(ICON) -appID $(APP_ID) -appVersion $(VERSION) -appBuild $(BUILD_NUM) -release
+PKG_FLAGS    := -icon $(ICON) -app-id $(APP_ID) -app-version $(VERSION) -app-build $(BUILD_NUM) -release
 
 
 .PHONY: all clean package package-windows package-mac
@@ -39,12 +39,11 @@ bin-win-amd64:
 bin-linux-amd64:
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build $(GOFLAGS) -o wssocks-smu-ui-linux-amd64 $(PACKAGE_PATH)
 
-
 package: package-mac package-windows package-linux
 
 
 package-windows: bin-win-amd64
-	$(FYNE) package -os windows $(PKG_FLAGS) -executable wssocks-smu-ui-windows-amd64.exe -name $(APP_NAME).exe
+	CC=$(CC_WIN) CGO_ENABLED=1 GOOS=windows GOARCH=amd64 $(FYNE) package -os windows $(PKG_FLAGS) -executable wssocks-smu-ui-windows-amd64.exe -name $(APP_NAME).exe
 	mv $(APP_NAME).exe client-ui-windows-amd64.exe
 	@echo "✅ Windows package created: client-ui-windows-amd64.exe"
 
@@ -56,8 +55,8 @@ package-mac: bin-mac-universal
 	@echo "✅ macOS package created: client-ui-macOS-universal.app"
 
 package-linux: bin-linux-amd64
-	@echo "✅ Linux binary ready: wssocks-smu-ui-linux-amd64"
-
-
+	$(FYNE) package -os linux $(PKG_FLAGS) -executable wssocks-smu-ui-linux-amd64 --name $(APP_NAME)
+	mv $(APP_NAME).tar.xz client-ui-linux-amd64.tar.xz
+	@echo "✅ Linux package created: client-ui-linux-amd64.tar.xz"
 clean:
 	rm -rf wssocks-smu-ui-* client-ui-* *.app *.exe fyne.syso

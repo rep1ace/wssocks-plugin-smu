@@ -15,8 +15,8 @@ import (
 	"github.com/genshen/cmds"
 	plugin "github.com/genshen/wssocks/client"
 	"github.com/genshen/wssocks/cmd/client"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn/passwd"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn/qrcode"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/qrcode"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
 )

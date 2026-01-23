@@ -2,9 +2,9 @@ package main
 
 import "C"
 import (
-	"github.com/genshen/wssocks-plugin-ustb/extra"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn/passwd"
+	"github.com/rep1ace/wssocks-plugin-smu/extra"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
 	"github.com/genshen/wssocks/client"
 	"unsafe"
 )

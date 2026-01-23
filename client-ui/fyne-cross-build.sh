@@ -11,5 +11,5 @@ buildEnv="GOPROXY=https://goproxy.cn"
 buildFlags="--app-build ${appBuildNumber} --app-id ${appID} --app-version ${appVersion} --icon ${appIcon} --env ${buildEnv}"
 
 fyne-cross linux ${buildFlags} --arch amd64 ./client-ui
-fyne-cross windows ${buildFlags} --arch amd64 ./client-ui
+fyne-cross windows ${buildFlags} --arch amd64 -ldflags "-H=windowsgui" ./client-ui
 fyne-cross darwin ${buildFlags} --arch amd64 ./client-ui

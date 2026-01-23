@@ -16,10 +16,10 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	resource "github.com/genshen/wssocks-plugin-ustb/client-ui/resources"
-	"github.com/genshen/wssocks-plugin-ustb/extra"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
-	pluginversion "github.com/genshen/wssocks-plugin-ustb/wssocks-ustb/version"
+	resource "github.com/rep1ace/wssocks-plugin-smu/client-ui/resources"
+	"github.com/rep1ace/wssocks-plugin-smu/extra"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
+	pluginversion "github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb/version"
 	"github.com/genshen/wssocks/client"
 	"github.com/genshen/wssocks/version"
 )
@@ -28,7 +28,7 @@ const (
 	AppName           = "wssocks Client"
 	AppId             = "wssocks-ustb.genshen.github.com"
 	CoreGithubRepoUrl = "https://github.com/genshen/wssocks"
-	GithubRepoUrl     = "https://github.com/genshen/wssocks-plugin-ustb"
+	GithubRepoUrl     = "https://github.com/rep1ace/wssocks-plugin-smu"
 	DocumentUrl       = "https://genshen.github.io/wssocks-plugin-ustb/"
 	MutexName         = "Global\\wssocks-plugin-ustb-client-ui"
 )

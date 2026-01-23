@@ -4,14 +4,14 @@ import (
 	"errors"
 	"flag"
 	"github.com/genshen/cmds"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/ver"
-	"github.com/genshen/wssocks-plugin-ustb/plugins/vpn"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/ver"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
 	"github.com/genshen/wssocks/client"
 	_ "github.com/genshen/wssocks/cmd/client"
 	_ "github.com/genshen/wssocks/cmd/server"
 	log "github.com/sirupsen/logrus"
 	//_ "github.com/genshen/wssocks/version"
-	_ "github.com/genshen/wssocks-plugin-ustb/wssocks-ustb/version"
+	_ "github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb/version"
 )
 
 // initialize USTB vpn (n.ustb.edu.cn) plugin
