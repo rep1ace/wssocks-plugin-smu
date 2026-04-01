@@ -11,7 +11,7 @@
  ```
  例如上面的命令，在服务端监听80端口(或者是别的端口,但client端`remote`选项需要和其相一致)。另外，需要确保你监听的端口已经被添加到主机防火墙的白名单列表中。
 
- see more: https://github.com/genshen/wssocks#server-side.
+ see more: https://github.com/rep1ace/wssocks#server-side.
 
 ## 使用示例:客户端
 1. 打开命令行,执行如下命令,运行客户端:

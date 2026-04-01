@@ -1,4 +1,4 @@
-
+CGO_ENV_MAC := CGO_CFLAGS="-mmacosx-version-min=12.1" CGO_LDFLAGS="-mmacosx-version-min=12.1"
 PACKAGE_PATH := github.com/rep1ace/wssocks-plugin-smu/client-ui
 APP_NAME     := WSSocks SMU Client
 APP_ID       := wssocks-smu-client-ui.rep1ace.github.com
@@ -12,7 +12,7 @@ FYNE         := fyne
 
 GOFLAGS      := -trimpath
 LDFLAGS_WIN  := -H=windowsgui
-PKG_FLAGS    := -icon $(ICON) -app-id $(APP_ID) -app-version $(VERSION) -app-build $(BUILD_NUM) -release
+PKG_FLAGS    := --icon $(ICON) --appID $(APP_ID) --appVersion $(VERSION) --appBuild $(BUILD_NUM) --release
 
 
 .PHONY: all clean package package-windows package-mac
@@ -22,11 +22,11 @@ all: package
 
 # macOS AMD64 Binary
 bin-mac-amd64:
-	CC=$(CC_MAC) CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o wssocks-smu-ui-macOS-amd64 $(PACKAGE_PATH)
+	CC=$(CC_MAC) $(CGO_ENV_MAC) CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o wssocks-smu-ui-macOS-amd64 $(PACKAGE_PATH)
 
 # macOS ARM64 Binary
 bin-mac-arm64:
-	CC=$(CC_MAC) CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build $(GOFLAGS) -o wssocks-smu-ui-macOS-arm64 $(PACKAGE_PATH)
+	CC=$(CC_MAC) $(CGO_ENV_MAC) CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build $(GOFLAGS) -o wssocks-smu-ui-macOS-arm64 $(PACKAGE_PATH)
 
 # macOS Universal Binary
 bin-mac-universal: bin-mac-amd64 bin-mac-arm64
@@ -49,7 +49,7 @@ package-windows: bin-win-amd64
 
 
 package-mac: bin-mac-universal
-	$(FYNE) package -os darwin $(PKG_FLAGS) -executable wssocks-smu-ui-macOS-universal -name "$(APP_NAME)"
+	$(CGO_ENV_MAC) $(FYNE) package -os darwin $(PKG_FLAGS) -executable wssocks-smu-ui-macOS-universal -name "$(APP_NAME)"
 	@echo "✅ macOS package created: wssocks-smu-client.app"
 
 package-linux: bin-linux-amd64

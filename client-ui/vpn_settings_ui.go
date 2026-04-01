@@ -22,7 +22,7 @@ func (v *VpnSettingsUI) Init(pref fyne.Preferences) {
 	v.uiVpnEnable = newCheckbox("enable smu vpn", true, nil)
 	v.uiVpnForceLogout = newCheckbox("", true, nil)
 	v.uiVpnHostEncrypt = newCheckbox("", true, nil)
-	v.uiVpnHostInput = &widget.Entry{PlaceHolder: "vpn hostname", Text: "n.ustb.edu.cn"}
+	v.uiVpnHostInput = &widget.Entry{PlaceHolder: "vpn hostname", Text: "webvpn.smu.edu.cn"}
 	v.uiVpnUsername = &widget.Entry{PlaceHolder: "vpn username", Text: ""}
 	v.uiVpnPassword = &widget.Entry{PlaceHolder: "vpn password", Text: "", Password: true}
 	v.uiSavePassword = newCheckbox("save password", false, nil)

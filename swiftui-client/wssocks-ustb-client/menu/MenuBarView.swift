@@ -27,6 +27,7 @@ struct MenuBarView: View {
 
     @State var ignoreWaitErr = true
     private let defaults = UserDefaults.standard
+    private let stateTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @State var wssocksStatus = 0
     var client = WssocksClient()
 
@@ -100,6 +101,11 @@ struct MenuBarView: View {
                 }.controlSize(.large) // .buttonStyle(BorderlessButtonStyle())
             }
             .padding(.horizontal, 8)
+
+            Text(statusDesc)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
            // .padding(.top)
 
            // Divider().padding(.top, 4)
@@ -166,6 +172,12 @@ struct MenuBarView: View {
             .padding(.horizontal, 8)
         }
         .frame(width: 250, height: 280)
+        .onAppear {
+            setWssocksStatusUI(status: wssocksStatus)
+        }
+        .onReceive(stateTimer) { _ in
+            refreshClientState()
+        }
     }
 
     private func copyProxyCommand(tp: CopyProxyCommandType) {
@@ -222,7 +234,7 @@ end tell
    }
 
     private func showGithubAction(_ sender: Any?) {
-       guard let url = URL(string: "https://github.com/genshen/wssocks-plugin-ustb") else {
+       guard let url = URL(string: "https://github.com/rep1ace/wssocks-plugin-smu") else {
            return
        }
        NSWorkspace.shared.open(url)
@@ -291,17 +303,30 @@ end tell
         self.wssocksStatus = status
         if status == 0 {
             statusDesc = "点击以开启wssocks"
-            statusItem.image = NSImage(named: "StatusIcon")
+            if statusItem != nil {
+                statusItem.image = NSImage(named: "StatusIcon")
+            }
         } else if status == 1 {
             statusDesc = "点击以停止wssocks"
-            statusItem.image = NSImage(named: "LaunchIcon")
+            if statusItem != nil {
+                statusItem.image = NSImage(named: "LaunchIcon")
+            }
         } else {
 
         }
     }
 
+    private func refreshClientState() {
+        guard wssocksStatus != 0 else {
+            return
+        }
+        if let state = client.currentState(), state != "" {
+            statusDesc = state
+        }
+    }
+
     private func showHelpAction(_ sender: Any?) {
-        guard let url = URL(string: "https://genshen.github.io/wssocks-plugin-ustb") else {
+        guard let url = URL(string: "https://github.com/rep1ace/wssocks-plugin-smu/tree/master/docs") else {
             return
         }
         NSWorkspace.shared.open(url)

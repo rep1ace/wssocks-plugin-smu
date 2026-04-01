@@ -4,7 +4,7 @@
 # How to run: go to root dir of this repo, run `./client-ui/fyne-cross-build.sh`
 
 appBuildNumber=5
-appID="wssocks-ustb-client-ui.genshen.github.com"
+appID="wssocks-smu-client-ui.rep1ace.github.com"
 appVersion=0.7.0
 appIcon=./client-ui/app-512.png
 buildEnv="GOPROXY=https://goproxy.cn"

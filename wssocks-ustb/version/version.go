@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/genshen/cmds"
-	"github.com/genshen/wssocks/wss"
+	"github.com/rep1ace/wssocks/wss"
 )
 
 // also change version in client-ui and swift-ui if  release
@@ -38,6 +38,6 @@ func (v *version) Run() error {
 	fmt.Printf("wssocks version(core version)\t %s\n", wss.CoreVersion)
 	fmt.Println("This is a socks5 proxy which allows you to visit internal network in USTB.")
 	fmt.Println("github https://github.com/rep1ace/wssocks-plugin-smu")
-	fmt.Println("based on https://github.com/genshen/wssocks")
+	fmt.Println("based on https://github.com/rep1ace/wssocks")
 	return nil
 }

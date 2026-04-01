@@ -30,6 +30,8 @@ const USTBVpnHttpsScheme = "https"
 const USTBVpnWSScheme = "ws"
 const USTBVpnWSSScheme = "wss"
 
+var ErrAuthFailed = errors.New("vpn authentication failed")
+
 // Keep existing interface for compatibility, though methods might change behavior or be unused
 type AutoLoginInterface interface {
 	TestAddr() string
@@ -131,7 +133,7 @@ func (al *AutoLogin) getCaptcha(client *http.Client) (string, error) {
 	q.Add("vpn-1", "")
 	req.URL.RawQuery = "vpn-1" // Force query string to match python script exactly if needed, though Add should work. Python uses params='vpn-1' which might be key only.
 	// Requests params='vpn-1' results in ?vpn-1.
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -156,8 +158,8 @@ func (al *AutoLogin) getCaptcha(client *http.Client) (string, error) {
 		return "", err
 	}
 	// We don't remove the file immediately so user can see it.
-	// defer os.Remove(file.Name()) 
-	
+	// defer os.Remove(file.Name())
+
 	if _, err := file.Write(imgData); err != nil {
 		file.Close()
 		return "", err
@@ -241,7 +243,7 @@ func (al *AutoLogin) sendLogin(account, password, captcha string, client *http.C
 		}
 		return "", errors.New("ticket not found in response")
 	}
-	return "", fmt.Errorf("登录失败，原因：%s", bodyString)
+	return "", fmt.Errorf("%w: 登录失败，原因：%s", ErrAuthFailed, bodyString)
 }
 
 func (al *AutoLogin) redirectLogin(client *http.Client, ticket string) error {
@@ -272,7 +274,7 @@ func (al *AutoLogin) redirectLogin(client *http.Client, ticket string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	
+
 	// We just need to execute this request to set cookies/session state
 	return nil
 }

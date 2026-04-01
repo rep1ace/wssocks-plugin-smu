@@ -2,10 +2,11 @@ package main
 
 import "C"
 import (
+	"fmt"
+	"github.com/rep1ace/wssocks/client"
 	"github.com/rep1ace/wssocks-plugin-smu/extra"
 	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
 	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
-	"github.com/genshen/wssocks/client"
 	"unsafe"
 )
 
@@ -68,6 +69,16 @@ func StopClientWrapper(handlesPtr uintptr) *C.char {
 	var hp = (*extra.TaskHandles)(unsafe.Pointer(handlesPtr))
 	hp.NotifyCloseWrapper()
 	return C.CString("")
+}
+
+//export GetClientStateWrapper
+func GetClientStateWrapper(handlesPtr uintptr) *C.char {
+	var hp = (*extra.TaskHandles)(unsafe.Pointer(handlesPtr))
+	state, reason := hp.CurrentState()
+	if reason == "" {
+		return C.CString(state)
+	}
+	return C.CString(fmt.Sprintf("%s: %s", state, reason))
 }
 
 func main() {}

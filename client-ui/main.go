@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/url"
 	"runtime"
+	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -16,20 +18,20 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/rep1ace/wssocks/client"
+	"github.com/rep1ace/wssocks/version"
 	resource "github.com/rep1ace/wssocks-plugin-smu/client-ui/resources"
 	"github.com/rep1ace/wssocks-plugin-smu/extra"
 	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
 	pluginversion "github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb/version"
-	"github.com/genshen/wssocks/client"
-	"github.com/genshen/wssocks/version"
 )
 
 const (
 	AppName           = "wssocks Client"
-	AppId             = "wssocks-ustb.genshen.github.com"
-	CoreGithubRepoUrl = "https://github.com/genshen/wssocks"
+	AppId             = "wssocks-smu-client-ui.rep1ace.github.com"
+	CoreGithubRepoUrl = "https://github.com/rep1ace/wssocks"
 	GithubRepoUrl     = "https://github.com/rep1ace/wssocks-plugin-smu"
-	DocumentUrl       = "https://genshen.github.io/wssocks-plugin-ustb/"
+	DocumentUrl       = "https://github.com/rep1ace/wssocks-plugin-smu/tree/master/docs"
 	MutexName         = "Global\\wssocks-plugin-ustb-client-ui"
 )
 
@@ -143,10 +145,29 @@ func main() {
 
 	btnStart := widget.NewButtonWithIcon("Start", theme.MailSendIcon(), nil)
 	btnStart.Importance = widget.HighImportance
+	statusLabel := widget.NewLabel("State: stopped")
+	statusLabel.Wrapping = fyne.TextWrapWord
 
 	btnStatus := btnStopped
 	var handles extra.TaskHandles
 	var ignoreWaitErr = true
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			state, reason := handles.CurrentState()
+			text := "State: " + strings.ReplaceAll(state, "_", " ")
+			if text == "State: " {
+				text = "State: stopped"
+			}
+			if reason != "" {
+				text += " - " + reason
+			}
+			fyne.Do(func() {
+				statusLabel.SetText(text)
+			})
+		}
+	}()
 	btnStart.OnTapped = func() {
 		if btnStatus == btnRunning { // running can stop
 			btnStatus = btnStopping
@@ -259,6 +280,7 @@ func main() {
 			),
 		),
 		btnStart,
+		statusLabel,
 		selectCopyProxyCommand,
 		&widget.Separator{},
 		container.NewGridWithColumns(2,

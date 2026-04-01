@@ -1,16 +1,16 @@
 # wssocks-plugin-ustb
-[![GitHub all releases](https://img.shields.io/github/downloads/genshen/wssocks-plugin-ustb/total?color=brightgreen)](https://github.com/genshen/wssocks-plugin-ustb/releases)
-[![Release](https://github.com/genshen/wssocks-plugin-ustb/actions/workflows/release.yml/badge.svg)](https://github.com/genshen/wssocks-plugin-ustb/actions/workflows/release.yml)
+[![GitHub all releases](https://img.shields.io/github/downloads/rep1ace/wssocks-plugin-smu/total?color=brightgreen)](https://github.com/rep1ace/wssocks-plugin-smu/releases)
+[![Release](https://github.com/rep1ace/wssocks-plugin-smu/actions/workflows/release.yml/badge.svg)](https://github.com/rep1ace/wssocks-plugin-smu/actions/workflows/release.yml)
 ![OSDN](https://img.shields.io/badge/OSDN-night%20release-red?link=https://osdn.net/projects/wssocks-ustb/releases/)
-![license](https://badgen.net/github/license/genshen/wssocks-plugin-ustb)
+![license](https://badgen.net/github/license/rep1ace/wssocks-plugin-smu)
 
 wssocks-plugin-ustb is a **wssocks** plugin, 
 used for accessing internal network of [USTB](http://www.ustb.edu.cn) 
 when the internal network is not available directly (such as at home).  
 
-This plugin is based on [wssocks](https://github.com/genshen/wssocks), 
+This plugin is based on [wssocks](https://github.com/rep1ace/wssocks), 
 which is a socks5 proxy application over websocket protocol.  
-See more about wssocks: https://github.com/genshen/wssocks.
+See more about wssocks: https://github.com/rep1ace/wssocks.
 
 ## Clients
 The available clients for different platforms are list as follows:
@@ -29,19 +29,19 @@ Note: **wssocks** and wssocks-plugin-ustb plugin are all included in both cli an
 
 ### install cli client
 ```bash
-go get -u github.com/genshen/wssocks-plugin-ustb/wssocks-ustb
+go get -u github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb
 wssocks-ustb --help
 ```
 
-Or download from github [releases](https://github.com/genshen/wssocks-plugin-ustb/releases) page,
+Or download from github [releases](https://github.com/rep1ace/wssocks-plugin-smu/releases) page,
 with file name `wssocks-ustb-$OS-$ARCH`.
 
 ### install client-ui
-You can obtain GUI client from [github releases](https://github.com/genshen/wssocks-plugin-ustb/releases), with file name `client-ui-$OS-$ARCH`.
+You can obtain GUI client from [github releases](https://github.com/rep1ace/wssocks-plugin-smu/releases), with file name `client-ui-$OS-$ARCH`.
 
 ## Night release clients
 If you would like to try new features, you can download wssocks-ustb night release from
 [OSDN](https://osdn.net/pkg/wssocks-ustb/wssocks-ustb).
 
 ## Document
-- [zh-cn](https://genshen.github.io/wssocks-plugin-ustb)
+- [zh-cn](https://github.com/rep1ace/wssocks-plugin-smu/tree/master/docs)

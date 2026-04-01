@@ -1,4 +1,4 @@
-PACKAGE=github.com/genshen/wssocks-plugin-ustb/wssocks-ustb
+PACKAGE=github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb
 
 .PHONY: clean all
 

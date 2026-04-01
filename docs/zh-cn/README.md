@@ -1,7 +1,7 @@
 > 从校外网络访问USTB校内网络
 
-![wssocks-ustb version](https://img.shields.io/github/v/release/genshen/wssocks-plugin-ustb?include_prereleases)
-[![GitHub all releases](https://img.shields.io/github/downloads/genshen/wssocks-plugin-ustb/total?color=brightgreen)](https://github.com/genshen/wssocks-plugin-ustb/releases)
+![wssocks-ustb version](https://img.shields.io/github/v/release/rep1ace/wssocks-plugin-smu?include_prereleases)
+[![GitHub all releases](https://img.shields.io/github/downloads/rep1ace/wssocks-plugin-smu/total?color=brightgreen)](https://github.com/rep1ace/wssocks-plugin-smu/releases)
 
 ## 使用示例: wssocks 服务端  
  在内网的服务端的主机(如地址为`proxy.gensh.me`的主机)上执行:
@@ -12,7 +12,7 @@
  ```
  例如上面的命令，在服务端监听80端口(或者是别的端口,但client端`remote`选项需要和其相一致)。另外，需要确保你监听的端口已经被添加到主机防火墙的白名单列表中。
 
- see more: https://github.com/genshen/wssocks#server-side.
+ see more: https://github.com/rep1ace/wssocks#server-side.
 
 ## 使用示例: wssocks 客户端 
 wssocks 客户端分为 cli 版本和 gui 版本，根据需求选择其中一种即可。
@@ -30,7 +30,7 @@ wssocks 客户端分为 cli 版本和 gui 版本，根据需求选择其中一�
    更多使用请参照**wssocks-ustb 命令行客户端参考**小节。
 
 ### - GUI version
- 在 v0.5.0 以后的版本中，还支持了 wssocks-ustb 的 GUI, 可以从[releases](https://github.com/genshen/wssocks-plugin-ustb/releases)下载 (client-ui-* 为GUI版本)。  
+ 在 v0.5.0 以后的版本中，还支持了 wssocks-ustb 的 GUI, 可以从[releases](https://github.com/rep1ace/wssocks-plugin-smu/releases)下载 (client-ui-* 为GUI版本)。  
  相对于 cli 版本, 配置更加方便。
 
 ## 代理客户端配置

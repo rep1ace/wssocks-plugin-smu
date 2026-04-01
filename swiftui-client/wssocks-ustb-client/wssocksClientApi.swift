@@ -51,4 +51,9 @@ struct WssocksClient {
         guard let v = StopClientWrapper(GoUintptr(self.handle)) else { return nil }
         return String(bytesNoCopy: v, length: strlen(v), encoding: .utf8, freeWhenDone: true)
     }
+
+    public func currentState() -> String? {
+        guard let v = GetClientStateWrapper(GoUintptr(self.handle)) else { return nil }
+        return String(bytesNoCopy: v, length: strlen(v), encoding: .utf8, freeWhenDone: true)
+    }
 }

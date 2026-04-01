@@ -1,5 +1,5 @@
 # Windows 远程桌面访问
-widnows 远程桌面是基于UDP 协议的，而目前 wssocks 还[不支持 UDP 协议](https://github.com/genshen/wssocks/issues/12)。
+widnows 远程桌面是基于UDP 协议的，而目前 wssocks 还[不支持 UDP 协议](https://github.com/rep1ace/wssocks/issues/12)。
 但远程桌面访问还是可以通过端口转发来实现的。
 
 连接远程桌面，需要另一台 Linux 服务器配合，请确保你在该 Linux 服务器上有账号并可登录。
