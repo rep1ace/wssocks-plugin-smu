@@ -27,12 +27,12 @@ import (
 )
 
 const (
-	AppName           = "wssocks Client"
+	AppName           = "WSSocks SMU Client"
 	AppId             = "wssocks-smu-client-ui.rep1ace.github.com"
 	CoreGithubRepoUrl = "https://github.com/rep1ace/wssocks"
 	GithubRepoUrl     = "https://github.com/rep1ace/wssocks-plugin-smu"
 	DocumentUrl       = "https://github.com/rep1ace/wssocks-plugin-smu/tree/master/docs"
-	MutexName         = "Global\\wssocks-plugin-ustb-client-ui"
+	MutexName         = "Global\\wssocks-plugin-smu-client-ui"
 )
 
 //go:embed app-512.png
@@ -123,7 +123,7 @@ func main() {
 
 	// basic input
 	uiLocalAddr := &widget.Entry{PlaceHolder: "socks5 listen address", Text: "127.0.0.1:1080"}
-	uiRemoteAddr := &widget.Entry{PlaceHolder: "wssocks server address"}
+	uiRemoteAddr := &widget.Entry{PlaceHolder: "WSSocks server address"}
 	uiAuthToken := &widget.Entry{PlaceHolder: "the token for proxy authentication"}
 	uiHttpEnable := newCheckbox("", false, nil)
 	uiHttpLocalAddr := &widget.Entry{PlaceHolder: "http listen address", Text: "127.0.0.1:1086"}
@@ -274,7 +274,7 @@ func main() {
 
 	w.SetContent(container.NewVBox(
 		container.NewAppTabs(
-			container.NewTabItem("Basic", widget.NewCard("", "wssocks settings", basicUi)),
+			container.NewTabItem("Basic", widget.NewCard("", "WSSocks settings", basicUi)),
 			container.NewTabItem("SMU VPN", container.NewVBox(
 				widget.NewCard("", "SMU VPN settings", vpnUi)),
 			),
@@ -286,14 +286,14 @@ func main() {
 		container.NewGridWithColumns(2,
 			container.NewHBox(
 				NewHyperlinkIcon(resource.GithubIcon(), coreRepoUrl),
-				widget.NewHyperlink("wssocks core: ", coreRepoUrl),
+				widget.NewHyperlink("WSSocks core: ", coreRepoUrl),
 			),
 			widget.NewLabel("v"+version.VERSION),
 		),
 		container.NewGridWithColumns(2,
 			container.NewHBox(
 				NewHyperlinkIcon(resource.GithubIcon(), repoUrl),
-				widget.NewHyperlink("USTB vpn plugin: ", repoUrl),
+				widget.NewHyperlink("SMU VPN plugin: ", repoUrl),
 			),
 			container.NewGridWithColumns(2,
 				widget.NewLabel("v"+pluginversion.VERSION),
@@ -368,7 +368,7 @@ func main() {
 	w.ShowAndRun()
 }
 
-// loadVpnUI creates ui for ustb vpn, including auth method selection and the input box.
+// loadVpnUI creates ui for SMU vpn, including auth method selection and the input box.
 // it returns callback function: onAppClose for saving preference,
 // loadUiValue for loading value from the input box.
 func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
