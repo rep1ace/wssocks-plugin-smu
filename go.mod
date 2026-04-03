@@ -6,11 +6,14 @@ require (
 	fyne.io/fyne/v2 v2.7.0
 	github.com/genshen/cmds v0.0.0-20200505065256-d4c52690e15b
 	github.com/rep1ace/wssocks v0.0.0-20260401145437-d9a4b8c60190
-	github.com/gorilla/websocket v1.4.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/yalue/onnxruntime_go v1.22.0
 	golang.org/x/crypto v0.33.0
+	golang.org/x/image v0.24.0
+	golang.org/x/sync v0.11.0
 	gopkg.in/yaml.v3 v3.0.1
+	nhooyr.io/websocket v1.8.7
 )
 
 require (
@@ -45,11 +48,8 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
-	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	nhooyr.io/websocket v1.8.7 // indirect
 )

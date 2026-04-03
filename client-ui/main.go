@@ -18,12 +18,14 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/rep1ace/wssocks/client"
-	"github.com/rep1ace/wssocks/version"
+	"github.com/rep1ace/wssocks-plugin-smu/client-ui/internal/captcha"
 	resource "github.com/rep1ace/wssocks-plugin-smu/client-ui/resources"
 	"github.com/rep1ace/wssocks-plugin-smu/extra"
 	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
 	pluginversion "github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb/version"
+	"github.com/rep1ace/wssocks/client"
+	"github.com/rep1ace/wssocks/version"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -381,66 +383,12 @@ func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
 		vals := vpn.UstbVpn{
 			QrCodeAuth: newQrCodeAuth(wssApp),
 			CaptchaHandler: func(imgData []byte) (string, error) {
-				// Create a channel to receive the result
-				// Use buffered channels to prevent deadlock if dialog callback fires after return
-				resultChan := make(chan string, 1)
-				errChan := make(chan error, 1)
-
-				// Run UI operations on the main thread
-				// The threading issue specifically: callbacks from core are not on UI thread.
-				// We must use fyne.Do to ensure UI operations are safe.
-
-				fyne.Do(func() {
-					// Create image from data
-					res := fyne.NewStaticResource("captcha.jpg", imgData)
-					img := canvas.NewImageFromResource(res)
-					img.FillMode = canvas.ImageFillContain
-					img.SetMinSize(fyne.NewSize(400, 160)) // Set a reasonable min size
-
-					entry := widget.NewEntry()
-					entry.PlaceHolder = "Enter Captcha"
-
-					content := container.NewVBox(
-						img,
-						entry,
-					)
-
-					var d dialog.Dialog
-					d = dialog.NewCustomConfirm("Enter Captcha", "OK", "Cancel", content, func(ok bool) {
-						if ok {
-							resultChan <- entry.Text
-						} else {
-							errChan <- fmt.Errorf("captcha input cancelled")
-						}
-					}, (*wssApp).Driver().AllWindows()[0]) // Assuming the main window is the first one or active one.
-
-					// Submit on Enter
-					entry.OnSubmitted = func(_ string) {
-						resultChan <- entry.Text
-						d.Hide()
-					}
-
-					d.Show()
-
-					// Attempt to focus with a slight delay if immediate doesn't work, but typically immediate is fine if shown
-					// Actually, Fyne recommends focusing after Show().
-					// Using a goroutine with slight delay can sometimes help if the window isn't fully ready,
-					// but let's try direct first.
-					if w := (*wssApp).Driver().AllWindows(); len(w) > 0 {
-						w[0].Canvas().Focus(entry)
-					}
-
-					// Also, to be safe, we can reuse the known window 'w' from closure if 'driver.AllWindows' is unreliable?
-					// But we are in a closure where 'w' (from main) is not directly available, only wssApp.
-					// The logic above used (*wssApp).Driver().AllWindows()[0], assuming main window.
-				})
-
-				select {
-				case res := <-resultChan:
-					return res, nil
-				case err := <-errChan:
-					return "", err
+				result, err := captcha.Predict(imgData)
+				if err == nil {
+					return result, nil
 				}
+				log.WithError(err).Warn("automatic CAPTCHA recognition failed, falling back to manual input")
+				return promptCaptchaInput(wssApp, imgData)
 			},
 		}
 		vpnSettings.LoadSettingsValues(&vals)
@@ -450,6 +398,53 @@ func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
 		vpnSettings.Save((*wssApp).Preferences())
 	}
 	return vpnUi, loadUiValues, onVpnClose
+}
+
+func promptCaptchaInput(wssApp *fyne.App, imgData []byte) (string, error) {
+	resultChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	fyne.Do(func() {
+		res := fyne.NewStaticResource("captcha.jpg", imgData)
+		img := canvas.NewImageFromResource(res)
+		img.FillMode = canvas.ImageFillContain
+		img.SetMinSize(fyne.NewSize(400, 160))
+
+		entry := widget.NewEntry()
+		entry.PlaceHolder = "Enter Captcha"
+
+		content := container.NewVBox(img, entry)
+
+		windows := (*wssApp).Driver().AllWindows()
+		if len(windows) == 0 {
+			errChan <- fmt.Errorf("no window available for captcha input")
+			return
+		}
+
+		var d dialog.Dialog
+		d = dialog.NewCustomConfirm("Enter Captcha", "OK", "Cancel", content, func(ok bool) {
+			if ok {
+				resultChan <- entry.Text
+			} else {
+				errChan <- fmt.Errorf("captcha input cancelled")
+			}
+		}, windows[0])
+
+		entry.OnSubmitted = func(_ string) {
+			resultChan <- entry.Text
+			d.Hide()
+		}
+
+		d.Show()
+		windows[0].Canvas().Focus(entry)
+	})
+
+	select {
+	case result := <-resultChan:
+		return result, nil
+	case err := <-errChan:
+		return "", err
+	}
 }
 
 // NewWSelectWithCopyProxyCommand is copied from widget.NewSelect.
