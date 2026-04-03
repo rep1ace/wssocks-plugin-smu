@@ -124,7 +124,7 @@ func main() {
 	// basic input
 	uiLocalAddr := &widget.Entry{PlaceHolder: "socks5 listen address", Text: "127.0.0.1:1080"}
 	uiRemoteAddr := &widget.Entry{PlaceHolder: "WSSocks server address"}
-	uiAuthToken := &widget.Entry{PlaceHolder: "the token for proxy authentication"}
+	uiAuthToken := &widget.Entry{PlaceHolder: "the token for proxy authentication", Password: true}
 	uiHttpEnable := newCheckbox("", false, nil)
 	uiHttpLocalAddr := &widget.Entry{PlaceHolder: "http listen address", Text: "127.0.0.1:1086"}
 	uiSkipTSLVerify := newCheckbox("", false, nil)

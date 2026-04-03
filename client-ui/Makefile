@@ -12,7 +12,7 @@ FYNE         := fyne
 
 GOFLAGS      := -trimpath
 LDFLAGS_WIN  := -H=windowsgui
-PKG_FLAGS    := --icon $(ICON) --appID $(APP_ID) --appVersion $(VERSION) --appBuild $(BUILD_NUM) --release
+PKG_FLAGS    := --icon $(ICON) --app-id $(APP_ID) --app-version $(VERSION) --app-build $(BUILD_NUM) --release
 
 
 .PHONY: all clean package package-windows package-mac

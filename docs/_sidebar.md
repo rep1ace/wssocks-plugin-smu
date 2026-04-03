@@ -8,4 +8,5 @@
 * [vscode Remote-SSH](zh-cn/vscode-remote-ssh.md)
 * [Git 访问校内 Git 服务器](zh-cn/git.md)
 * [Windows 远程桌面访问](zh-cn/windows-remote-desktop.md)
+* [服务端部署](zh-cn/server-deploy.md)
 * [wssocks 项目](zh-cn/github.md)
