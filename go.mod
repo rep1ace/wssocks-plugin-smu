@@ -5,7 +5,7 @@ go 1.19
 require (
 	fyne.io/fyne/v2 v2.7.0
 	github.com/genshen/cmds v0.0.0-20200505065256-d4c52690e15b
-	github.com/rep1ace/wssocks v0.0.0-20260401145437-d9a4b8c60190
+	github.com/rep1ace/wssocks v0.0.0-20260403154141-878ab99875db
 	github.com/sirupsen/logrus v1.9.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/yalue/onnxruntime_go v1.22.0
