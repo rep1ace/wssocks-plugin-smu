@@ -22,6 +22,7 @@ import (
 	resource "github.com/rep1ace/wssocks-plugin-smu/client-ui/resources"
 	"github.com/rep1ace/wssocks-plugin-smu/extra"
 	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
 	pluginversion "github.com/rep1ace/wssocks-plugin-smu/wssocks-ustb/version"
 	"github.com/rep1ace/wssocks/client"
 	"github.com/rep1ace/wssocks/version"
@@ -390,6 +391,9 @@ func loadVpnUI(wssApp *fyne.App) (*fyne.Container, func() vpn.UstbVpn, func()) {
 				log.WithError(err).Warn("automatic CAPTCHA recognition failed, falling back to manual input")
 				return promptCaptchaInput(wssApp, imgData)
 			},
+			PhoneVerificationHandler: func(challenge passwd.PhoneVerificationChallenge) (string, error) {
+				return promptPhoneVerificationInput(wssApp, challenge)
+			},
 		}
 		vpnSettings.LoadSettingsValues(&vals)
 		return vals
@@ -427,6 +431,56 @@ func promptCaptchaInput(wssApp *fyne.App, imgData []byte) (string, error) {
 				resultChan <- entry.Text
 			} else {
 				errChan <- fmt.Errorf("captcha input cancelled")
+			}
+		}, windows[0])
+
+		entry.OnSubmitted = func(_ string) {
+			resultChan <- entry.Text
+			d.Hide()
+		}
+
+		d.Show()
+		windows[0].Canvas().Focus(entry)
+	})
+
+	select {
+	case result := <-resultChan:
+		return result, nil
+	case err := <-errChan:
+		return "", err
+	}
+}
+
+func promptPhoneVerificationInput(wssApp *fyne.App, challenge passwd.PhoneVerificationChallenge) (string, error) {
+	resultChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	fyne.Do(func() {
+		phoneText := challenge.Phone
+		if phoneText == "" {
+			phoneText = "bound phone"
+		}
+
+		entry := widget.NewEntry()
+		entry.PlaceHolder = "SMS Code"
+
+		content := container.NewVBox(
+			widget.NewLabel(fmt.Sprintf("Code sent to %s", phoneText)),
+			entry,
+		)
+
+		windows := (*wssApp).Driver().AllWindows()
+		if len(windows) == 0 {
+			errChan <- fmt.Errorf("no window available for phone verification input")
+			return
+		}
+
+		var d dialog.Dialog
+		d = dialog.NewCustomConfirm("Phone Verification", "OK", "Cancel", content, func(ok bool) {
+			if ok {
+				resultChan <- entry.Text
+			} else {
+				errChan <- fmt.Errorf("phone verification input cancelled")
 			}
 		}, windows[0])
 

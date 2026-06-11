@@ -2,7 +2,6 @@ package captcha
 
 import (
 	"bytes"
-	"embed"
 	"errors"
 	"fmt"
 	"image"
@@ -37,9 +36,6 @@ const (
 )
 
 var (
-	//go:embed assets/model/captcha_model.onnx assets/model/captcha_model.onnx.data assets/ort/windows-amd64/onnxruntime.dll assets/ort/darwin-amd64/libonnxruntime.1.22.0.dylib assets/ort/darwin-arm64/libonnxruntime.1.22.0.dylib
-	embeddedAssets embed.FS
-
 	defaultRecognizerOnce sync.Once
 	defaultRecognizer     *Recognizer
 	defaultRecognizerErr  error

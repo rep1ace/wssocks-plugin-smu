@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/genshen/cmds"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
+	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/qrcode"
 	plugin "github.com/rep1ace/wssocks/client"
 	"github.com/rep1ace/wssocks/cmd/client"
 	"github.com/rep1ace/wssocks/wss"
-	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/passwd"
-	"github.com/rep1ace/wssocks-plugin-smu/plugins/vpn/qrcode"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -42,15 +42,16 @@ const (
 var ErrSessionExpired = errors.New("vpn session expired")
 
 type UstbVpn struct {
-	Enable         bool
-	AuthMethod     int // value of VpnAuthMethodPasswd or VpnAuthMethodQRCode
-	PasswdAuth     passwd.UstbVpnPasswdAuth
-	QrCodeAuth     qrcode.QrCodeAuth
-	TargetVpn      string
-	HostEncrypt    bool
-	ForceLogout    bool
-	ConnOptions    plugin.Options // normal connection options
-	CaptchaHandler passwd.CaptchaHandler
+	Enable                   bool
+	AuthMethod               int // value of VpnAuthMethodPasswd or VpnAuthMethodQRCode
+	PasswdAuth               passwd.UstbVpnPasswdAuth
+	QrCodeAuth               qrcode.QrCodeAuth
+	TargetVpn                string
+	HostEncrypt              bool
+	ForceLogout              bool
+	ConnOptions              plugin.Options // normal connection options
+	CaptchaHandler           passwd.CaptchaHandler
+	PhoneVerificationHandler passwd.PhoneVerificationHandler
 
 	runtime *runtimeState
 }
@@ -251,10 +252,11 @@ func (v *UstbVpn) ensurePasswordSession(forceRefresh bool) (*vpnSession, bool, e
 	}
 
 	al := passwd.AutoLogin{
-		Host:           v.TargetVpn,
-		ForceLogout:    v.ForceLogout,
-		SkipTLSVerify:  v.ConnOptions.SkipTLSVerify,
-		CaptchaHandler: v.CaptchaHandler,
+		Host:                     v.TargetVpn,
+		ForceLogout:              v.ForceLogout,
+		SkipTLSVerify:            v.ConnOptions.SkipTLSVerify,
+		CaptchaHandler:           v.CaptchaHandler,
+		PhoneVerificationHandler: v.PhoneVerificationHandler,
 	}
 	cookies, err := al.VpnLogin(username, password)
 	if err != nil {
